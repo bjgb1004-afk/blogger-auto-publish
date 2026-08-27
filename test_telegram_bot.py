@@ -59,3 +59,50 @@ def test_get_events_parses_approve_and_count(monkeypatch):
     assert next_offset == 3
     assert events[0] == {"type": "approve", "draft_id": 7, "callback_query_id": "cq1"}
     assert events[1] == {"type": "count", "value": 3}
+
+
+def test_send_alert_posts_message(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        return _FakeResp({})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    telegram_bot.send_alert("경고 메시지")
+    assert captured["json"]["text"] == "경고 메시지"
+    assert captured["json"]["chat_id"] == "123"
+
+
+def test_answer_callback_posts_response(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["json"] = json
+        return _FakeResp({})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    telegram_bot.answer_callback("cq123", "승인됨")
+    assert captured["json"]["callback_query_id"] == "cq123"
+    assert captured["json"]["text"] == "승인됨"
+
+
+def test_get_events_advances_offset_past_non_event_updates(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    updates = [
+        {"update_id": 5, "message": {"text": "hello"}},
+        {"update_id": 6, "message": {"text": "/count abc"}},
+        {"update_id": 7, "callback_query": {"id": "cqX", "data": "approve:1"}},
+    ]
+    monkeypatch.setattr(
+        telegram_bot.requests, "get",
+        lambda url, params, timeout: _FakeResp({"result": updates}),
+    )
+    events, next_offset = telegram_bot.get_events(offset=0)
+    assert next_offset == 8
+    assert len(events) == 1
+    assert events[0] == {"type": "approve", "draft_id": 1, "callback_query_id": "cqX"}

@@ -30,7 +30,8 @@ def send_draft_notification(draft_id: int, title: str, keyword: str, warnings: l
 
 def send_alert(text: str) -> None:
     payload = {"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": text}
-    requests.post(_url("sendMessage"), json=payload, timeout=10)
+    resp = requests.post(_url("sendMessage"), json=payload, timeout=10)
+    resp.raise_for_status()
 
 
 def get_events(offset: int):
@@ -56,8 +57,9 @@ def get_events(offset: int):
 
 
 def answer_callback(callback_query_id: str, text: str) -> None:
-    requests.post(
+    resp = requests.post(
         _url("answerCallbackQuery"),
         json={"callback_query_id": callback_query_id, "text": text},
         timeout=10,
     )
+    resp.raise_for_status()
