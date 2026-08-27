@@ -68,3 +68,35 @@ def test_run_passes_validation_warnings_to_telegram(monkeypatch):
 
     generate_drafts.run()
     assert captured["warnings"] == ["본문이 짧음"]
+
+
+def test_run_persists_draft_even_when_telegram_notification_fails(monkeypatch):
+    monkeypatch.setattr(generate_drafts.db, "init_db", lambda: None)
+    monkeypatch.setattr(generate_drafts.config, "get_daily_post_count", lambda: 1)
+    monkeypatch.setattr(generate_drafts.db, "get_today_count", lambda: 0)
+    monkeypatch.setattr(generate_drafts.keywords, "get_keywords_to_use", lambda needed: ["k1"])
+    monkeypatch.setattr(
+        generate_drafts.generator, "generate_post",
+        lambda keyword: {"title": "t", "content": "c", "tags": []},
+    )
+    monkeypatch.setattr(generate_drafts.validate, "check_draft", lambda title, content: [])
+
+    inserted = []
+    monkeypatch.setattr(
+        generate_drafts.db, "insert_draft",
+        lambda kw, t, c, tags: inserted.append(kw) or 1,
+    )
+
+    def raise_telegram_error(*args, **kwargs):
+        raise RuntimeError("telegram down")
+
+    monkeypatch.setattr(
+        generate_drafts.telegram_bot, "send_draft_notification",
+        raise_telegram_error,
+    )
+    monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
+
+    created = generate_drafts.run()
+    assert len(inserted) == 1
+    assert inserted == ["k1"]
+    assert created == 1
