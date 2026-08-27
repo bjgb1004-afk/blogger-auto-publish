@@ -51,9 +51,11 @@ def post_to_blogger(blog_id, title, content, tags=[]):
         print(f"📌 글 제목: {response['title']}")
         print(f"🔗 포스팅 URL: {response['url']}")
         print("=" * 50)
+        return True
 
     except Exception as e:
         print(f"❌ 포스팅 중 오류 발생: {e}")
+        return False
 
 # 3. 메인 실행 영역
 if __name__ == '__main__':
