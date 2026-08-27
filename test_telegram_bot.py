@@ -1,0 +1,61 @@
+import telegram_bot
+
+
+class _FakeResp:
+    def __init__(self, json_data):
+        self._json = json_data
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._json
+
+
+def test_send_draft_notification(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["url"] = url
+        captured["json"] = json
+        return _FakeResp({"result": {"message_id": 99}})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    msg_id = telegram_bot.send_draft_notification(5, "제목", "키워드")
+    assert msg_id == 99
+    assert "tok" in captured["url"]
+    assert captured["json"]["chat_id"] == "123"
+    assert "approve:5" in str(captured["json"]["reply_markup"])
+    assert "⚠" not in captured["json"]["text"]
+
+
+def test_send_draft_notification_includes_warnings(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["json"] = json
+        return _FakeResp({"result": {"message_id": 100}})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    telegram_bot.send_draft_notification(6, "제목", "키워드", warnings=["본문이 짧음"])
+    assert "본문이 짧음" in captured["json"]["text"]
+
+
+def test_get_events_parses_approve_and_count(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    updates = [
+        {"update_id": 1, "callback_query": {"id": "cq1", "data": "approve:7"}},
+        {"update_id": 2, "message": {"text": "/count 3"}},
+    ]
+    monkeypatch.setattr(
+        telegram_bot.requests, "get",
+        lambda url, params, timeout: _FakeResp({"result": updates}),
+    )
+    events, next_offset = telegram_bot.get_events(offset=0)
+    assert next_offset == 3
+    assert events[0] == {"type": "approve", "draft_id": 7, "callback_query_id": "cq1"}
+    assert events[1] == {"type": "count", "value": 3}
