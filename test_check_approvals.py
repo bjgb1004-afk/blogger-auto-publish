@@ -61,3 +61,26 @@ def test_run_retries_and_alerts_on_repeated_publish_failure(monkeypatch):
 
     assert len(alerts) == 1
     assert "9" in alerts[0]
+
+
+def test_run_does_not_alert_at_exactly_max_retry(monkeypatch):
+    monkeypatch.setattr(check_approvals.db, "init_db", lambda: None)
+    monkeypatch.setattr(check_approvals.db, "get_meta", lambda key, default=None: "0")
+    monkeypatch.setattr(check_approvals.telegram_bot, "get_events", lambda offset: ([], 0))
+    monkeypatch.setattr(check_approvals.db, "set_meta", lambda k, v: None)
+    monkeypatch.setattr(
+        check_approvals.db, "get_approved_unpublished",
+        lambda: [{"id": 9, "title": "t", "content": "c", "tags": "[]"}],
+    )
+    monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
+    monkeypatch.setattr(
+        check_approvals.post, "post_to_blogger",
+        lambda blog_id, title, content, tags: False,
+    )
+    monkeypatch.setattr(check_approvals.db, "increment_retry", lambda draft_id: 5)
+    alerts = []
+    monkeypatch.setattr(check_approvals.telegram_bot, "send_alert", lambda text: alerts.append(text))
+
+    check_approvals.run()
+
+    assert len(alerts) == 0
