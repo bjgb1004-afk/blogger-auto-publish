@@ -31,5 +31,7 @@ Blogger에 실제로 글이 올라가는지 확인.
 ```
 python register_tasks.py
 ```
+**주의:** Windows의 스케줄 등록은 관리자 권한(Run as Administrator)이 필요합니다. 권한 오류가 나면 PowerShell을 관리자 권한으로 다시 실행하세요.
+
 `generate_drafts.py`는 2시간마다, `check_approvals.py`는 10분마다 자동 실행되도록 등록됨.
 확인: 작업 스케줄러(taskschd.msc)에서 `BlogAuto_GenerateDrafts`, `BlogAuto_CheckApprovals` 두 작업이 보이면 성공.
