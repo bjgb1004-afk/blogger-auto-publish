@@ -1,3 +1,5 @@
+import logging
+
 from pytrends.request import TrendReq
 
 import db
@@ -27,8 +29,8 @@ def get_keywords_to_use(needed_count: int) -> list:
     candidates = []
     try:
         candidates.extend(get_trend_keywords())
-    except Exception:
-        pass
+    except Exception as e:
+        logging.warning("get_trend_keywords failed, falling back to evergreen only: %s", e)
     candidates.extend(get_evergreen_keywords())
 
     result = []
