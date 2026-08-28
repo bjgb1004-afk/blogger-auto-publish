@@ -8,6 +8,13 @@
   `https://api.telegram.org/bot<TOKEN>/getUpdates` 접속해서 `chat.id` 값 확인
 - `BLOGGER_BLOG_ID`: 이미 기본값 채워져 있음(기존 post.py에서 쓰던 블로그)
 
+### Google OAuth (`credentials.json`) 준비
+Blogger API로 글을 올리려면 구글 OAuth 클라이언트가 필요합니다:
+1. https://console.cloud.google.com/apis/credentials 에서 프로젝트 생성(또는 기존 프로젝트 선택)
+2. "라이브러리"에서 Blogger API v3 검색 후 사용 설정
+3. "사용자 인증 정보 만들기" → "OAuth 클라이언트 ID" → 애플리케이션 유형 "데스크톱 앱"으로 생성
+4. 다운로드한 JSON 파일을 `credentials.json`이라는 이름으로 프로젝트 폴더에 저장
+
 ## 2. 초기 발행 개수 설정 (선택)
 `config.json`이 없으면 첫 실행 때 자동으로 `{"daily_post_count": 5}`로 생성됨.
 바꾸고 싶으면 직접 숫자를 고치거나, 나중에 텔레그램으로 `/count 3` 처럼 보내면 됨.
@@ -26,6 +33,8 @@ python generate_drafts.py
 python check_approvals.py
 ```
 Blogger에 실제로 글이 올라가는지 확인.
+
+**주의:** 이 첫 실행에서 브라우저가 열려 구글 로그인을 요청합니다 — 반드시 사람이 있는 상태에서 최소 한 번은 `check_approvals.py`(또는 `post.py`)를 직접 실행해서 `token.json`을 만들어 두어야 합니다. 이 과정을 건너뛰고 바로 스케줄러에 등록하면, 첫 스케줄 실행이 브라우저 콜백을 기다리며 무한정 멈춥니다.
 
 ## 5. 스케줄러 등록
 ```
