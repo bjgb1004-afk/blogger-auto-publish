@@ -36,14 +36,19 @@ Blogger에 실제로 글이 올라가는지 확인.
 
 **주의:** 이 첫 실행에서 브라우저가 열려 구글 로그인을 요청합니다 — 반드시 사람이 있는 상태에서 최소 한 번은 `check_approvals.py`(또는 `post.py`)를 직접 실행해서 `token.json`을 만들어 두어야 합니다. 이 과정을 건너뛰고 바로 스케줄러에 등록하면, 첫 스케줄 실행이 브라우저 콜백을 기다리며 무한정 멈춥니다.
 
-## 5. 스케줄러 등록
-```
-python register_tasks.py
-```
-**주의:** Windows의 스케줄 등록은 관리자 권한(Run as Administrator)이 필요합니다. 권한 오류가 나면 PowerShell을 관리자 권한으로 다시 실행하세요.
+## 5. GitHub Actions로 무인 실행 등록
+PC가 꺼져있어도 돌아가도록 Windows 작업 스케줄러 대신 GitHub Actions를 씀 (`.github/workflows/generate-drafts.yml`, `.github/workflows/check-approvals.yml`).
 
-`generate_drafts.py`는 2시간마다, `check_approvals.py`는 10분마다 자동 실행되도록 등록됨.
-확인: 작업 스케줄러(taskschd.msc)에서 `BlogAuto_GenerateDrafts`, `BlogAuto_CheckApprovals` 두 작업이 보이면 성공.
+1. GitHub에 새 저장소 생성 (private 권장)
+2. 로컬 저장소를 push: `git remote add origin <저장소 URL>` → `git push -u origin feature/blog-auto-publish`
+3. 저장소 Settings → Secrets and variables → Actions → New repository secret 에서 아래 등록:
+   - `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BLOGGER_BLOG_ID`: `.env`에 넣은 값 그대로
+   - `GOOGLE_CREDENTIALS_JSON`: `credentials.json` 파일 내용 그대로 붙여넣기
+   - `GOOGLE_TOKEN_JSON`: `token.json` 파일 내용 그대로 붙여넣기 (4단계에서 브라우저 로그인으로 이미 만들어둔 파일)
+4. push 직후 저장소의 Actions 탭에서 두 워크플로가 보임. 각각 "Run workflow" 버튼으로 1회 수동 실행해서 정상 동작 확인
+5. 이후로는 자동: `generate-drafts`는 하루 5번(KST 09/12/15/18/21시, 1개씩), `check-approvals`는 10분마다 실행됨
+
+`drafts.db`, `config.json`은 실행마다 저장소에 자동 커밋되어 상태가 이어짐 — 별도 DB 서비스 필요 없음.
 
 ## 6. 애드센스 신청 준비
 

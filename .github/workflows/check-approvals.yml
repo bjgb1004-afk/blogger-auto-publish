@@ -1,0 +1,46 @@
+name: Check Approvals
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Write credentials
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS_JSON }}' > credentials.json
+          echo '${{ secrets.GOOGLE_TOKEN_JSON }}' > token.json
+
+      - name: Run check_approvals.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+        run: python check_approvals.py
+
+      - name: Show log
+        if: always()
+        run: tail -n 30 app.log || true
+
+      - name: Commit state
+        run: |
+          git config user.name "blog-auto-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add drafts.db config.json
+          git diff --staged --quiet || git commit -m "chore: draft state update"
+          git pull --rebase
+          git push

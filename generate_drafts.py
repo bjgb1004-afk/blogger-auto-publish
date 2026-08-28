@@ -17,6 +17,9 @@ def run() -> int:
     target = config.get_daily_post_count()
     already = db.get_today_count()
     needed = max(0, target - already)
+    max_per_run = os.environ.get("GENERATE_MAX_PER_RUN")
+    if max_per_run:
+        needed = min(needed, int(max_per_run))
     if needed == 0:
         logging.info("generate_drafts: target %d already met (%d today), skip", target, already)
         return 0

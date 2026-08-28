@@ -1,10 +1,8 @@
 .env
 token.json
 credentials.json
-*.db
 __pycache__/
 *.pyc
 app.log
 .superpowers/
-config.json
 .claude/

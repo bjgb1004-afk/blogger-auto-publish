@@ -1,5 +1,12 @@
 import os.path
+import sys
 from pathlib import Path
+
+try:
+    if sys.stdout.encoding != "utf-8":
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, ValueError):
+    pass
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
