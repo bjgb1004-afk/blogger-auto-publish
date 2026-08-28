@@ -149,7 +149,7 @@ def test_run_retries_notification_for_orphaned_pending_drafts(monkeypatch):
 
     notify_calls = []
 
-    def fake_send_draft_notification(draft_id, title, keyword, warnings=None):
+    def fake_send_draft_notification(draft_id, title, keyword, warnings=None, content=""):
         notify_calls.append((draft_id, title, keyword, warnings))
         return 777
 

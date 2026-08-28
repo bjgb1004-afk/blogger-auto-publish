@@ -28,6 +28,41 @@ def test_send_draft_notification(monkeypatch):
     assert "tok" in captured["url"]
     assert captured["json"]["chat_id"] == "123"
     assert "approve:5" in str(captured["json"]["reply_markup"])
+
+
+def test_send_draft_notification_includes_content_preview_without_html(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["json"] = json
+        return _FakeResp({"result": {"message_id": 1}})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    telegram_bot.send_draft_notification(
+        5, "제목", "키워드", content="<h2>소제목</h2><p>본문 내용입니다.</p>"
+    )
+    text = captured["json"]["text"]
+    assert "<h2>" not in text
+    assert "소제목" in text and "본문 내용입니다." in text
+
+
+def test_send_draft_notification_truncates_long_content_preview(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["json"] = json
+        return _FakeResp({"result": {"message_id": 1}})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    long_content = "<p>" + "가" * 2000 + "</p>"
+    telegram_bot.send_draft_notification(5, "제목", "키워드", content=long_content)
+    text = captured["json"]["text"]
+    assert text.endswith("…")
+    assert len(text) < len(long_content)
     assert "⚠" not in captured["json"]["text"]
 
 

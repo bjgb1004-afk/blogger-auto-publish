@@ -1,18 +1,30 @@
 import os
+import re
 
 import requests
 
 API_BASE = "https://api.telegram.org/bot{token}/{method}"
+PREVIEW_LENGTH = 800
 
 
 def _url(method: str) -> str:
     return API_BASE.format(token=os.environ["TELEGRAM_BOT_TOKEN"], method=method)
 
 
-def send_draft_notification(draft_id: int, title: str, keyword: str, warnings: list = None) -> int:
+def _preview(content: str) -> str:
+    plain = re.sub(r"<[^>]+>", "", content)
+    plain = re.sub(r"\s+", " ", plain).strip()
+    if len(plain) > PREVIEW_LENGTH:
+        return plain[:PREVIEW_LENGTH] + "…"
+    return plain
+
+
+def send_draft_notification(draft_id: int, title: str, keyword: str, warnings: list = None, content: str = "") -> int:
     text = f"[초안 #{draft_id}] {title}\n키워드: {keyword}"
     if warnings:
         text += "\n⚠ " + "; ".join(warnings)
+    if content:
+        text += "\n\n" + _preview(content)
     payload = {
         "chat_id": os.environ["TELEGRAM_CHAT_ID"],
         "text": text,

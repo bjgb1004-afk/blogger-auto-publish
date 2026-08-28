@@ -38,7 +38,9 @@ def run() -> int:
         )
         warnings = validate.check_draft(post_data["title"], post_data["content"])
         try:
-            msg_id = telegram_bot.send_draft_notification(draft_id, post_data["title"], keyword, warnings)
+            msg_id = telegram_bot.send_draft_notification(
+                draft_id, post_data["title"], keyword, warnings, content=post_data["content"]
+            )
             db.set_telegram_msg_id(draft_id, msg_id)
         except Exception as e:
             logging.error("generate_drafts: telegram notify failed for draft %d: %s", draft_id, e)

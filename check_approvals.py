@@ -41,7 +41,9 @@ def run() -> None:
 
     for draft in db.get_pending_without_telegram_msg():
         try:
-            msg_id = telegram_bot.send_draft_notification(draft["id"], draft["title"], draft["keyword"], warnings=None)
+            msg_id = telegram_bot.send_draft_notification(
+                draft["id"], draft["title"], draft["keyword"], warnings=None, content=draft.get("content", "")
+            )
             db.set_telegram_msg_id(draft["id"], msg_id)
         except Exception as e:
             logging.error("check_approvals: retry notify failed for draft %d: %s", draft["id"], e)
