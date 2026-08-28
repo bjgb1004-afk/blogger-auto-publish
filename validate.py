@@ -1,7 +1,7 @@
 import re
 from collections import Counter
 
-MIN_LENGTH = 200
+MIN_LENGTH = 2000
 CHECKED_TAGS = ("h2", "p", "strong")
 
 

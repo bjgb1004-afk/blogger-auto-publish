@@ -13,6 +13,6 @@ def test_check_draft_flags_mismatched_tags():
 
 
 def test_check_draft_no_warnings_for_clean_long_content():
-    content = "<h2>제목</h2><p>" + "충분히 긴 본문 내용입니다. " * 20 + "</p>"
+    content = "<h2>제목</h2><p>" + "충분히 길고 구체적인 본문 내용을 담고 있습니다. " * 150 + "</p>"
     warnings = validate.check_draft("제목", content)
     assert warnings == []
