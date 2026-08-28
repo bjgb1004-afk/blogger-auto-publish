@@ -2,9 +2,15 @@ import generator
 
 
 def test_parse_response_plain_json():
-    text = '{"title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"]}'
+    text = '{"title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"], "summary": "요약"}'
     result = generator._parse_response(text)
-    assert result == {"title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"]}
+    assert result == {"title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"], "summary": "요약"}
+
+
+def test_parse_response_defaults_summary_when_missing():
+    text = '{"title": "제목", "content": "<p>본문</p>"}'
+    result = generator._parse_response(text)
+    assert result["summary"] == ""
 
 
 def test_parse_response_strips_markdown_fence():
