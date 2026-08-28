@@ -99,6 +99,18 @@ def update_status(draft_id: int, status: str) -> None:
         conn.close()
 
 
+def set_status_if_pending(draft_id: int, status: str) -> bool:
+    conn = get_connection()
+    try:
+        cursor = conn.execute(
+            "UPDATE drafts SET status = ? WHERE id = ? AND status = 'pending'", (status, draft_id)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
 def increment_retry(draft_id: int) -> int:
     conn = get_connection()
     try:

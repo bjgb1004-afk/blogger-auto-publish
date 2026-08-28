@@ -20,15 +20,19 @@ def run() -> None:
 
     for event in events:
         if event["type"] == "approve":
-            db.update_status(event["draft_id"], "approved")
+            applied = db.set_status_if_pending(event["draft_id"], "approved")
             try:
-                telegram_bot.answer_callback(event["callback_query_id"], "승인됨")
+                telegram_bot.answer_callback(
+                    event["callback_query_id"], "승인됨" if applied else "이미 처리된 초안임"
+                )
             except Exception as e:
                 logging.warning("answer_callback failed (likely expired callback query, safe to ignore): %s", e)
         elif event["type"] == "reject":
-            db.update_status(event["draft_id"], "rejected")
+            applied = db.set_status_if_pending(event["draft_id"], "rejected")
             try:
-                telegram_bot.answer_callback(event["callback_query_id"], "거부됨")
+                telegram_bot.answer_callback(
+                    event["callback_query_id"], "거부됨" if applied else "이미 처리된 초안임"
+                )
             except Exception as e:
                 logging.warning("answer_callback failed (likely expired callback query, safe to ignore): %s", e)
         elif event["type"] == "count":

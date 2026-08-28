@@ -12,6 +12,10 @@ def test_run_processes_events_and_publishes(monkeypatch):
 
     status_updates = []
     monkeypatch.setattr(
+        check_approvals.db, "set_status_if_pending",
+        lambda draft_id, status: status_updates.append((draft_id, status)) or True,
+    )
+    monkeypatch.setattr(
         check_approvals.db, "update_status",
         lambda draft_id, status: status_updates.append((draft_id, status)),
     )
@@ -112,8 +116,8 @@ def test_run_answer_callback_failure_does_not_crash_and_still_persists_status(mo
 
     status_updates = []
     monkeypatch.setattr(
-        check_approvals.db, "update_status",
-        lambda draft_id, status: status_updates.append((draft_id, status)),
+        check_approvals.db, "set_status_if_pending",
+        lambda draft_id, status: status_updates.append((draft_id, status)) or True,
     )
 
     def raise_expired(cq_id, text):
