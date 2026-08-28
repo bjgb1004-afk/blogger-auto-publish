@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).parent / "config.json"
-DEFAULT_CONFIG = {"daily_post_count": 5}
+DEFAULT_CONFIG = {"daily_post_count": 3}
 
 
 def load_config() -> dict:
