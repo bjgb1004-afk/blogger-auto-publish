@@ -1,4 +1,10 @@
 import keywords
+import pandas as pd
+
+
+def test_evergreen_keywords_scoped_to_finance_and_health():
+    assert set(keywords.EVERGREEN_KEYWORDS.keys()) == {"주식/금융/재테크/경제", "건강"}
+    assert "집들이 요리 추천" not in keywords.get_evergreen_keywords()
 
 
 def test_get_evergreen_keywords_nonempty():
@@ -22,3 +28,51 @@ def test_get_keywords_to_use_falls_back_when_trends_fail(monkeypatch):
     monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
     result = keywords.get_keywords_to_use(needed_count=1)
     assert len(result) == 1
+
+
+class _FakePyTrends:
+    def __init__(self, rising_by_seed):
+        self._rising_by_seed = rising_by_seed
+        self.built_seeds = []
+
+    def build_payload(self, kw_list, timeframe=None, geo=None):
+        self.built_seeds.append(kw_list[0])
+
+    def related_queries(self):
+        seed = self.built_seeds[-1]
+        rising = self._rising_by_seed.get(seed)
+        return {seed: {"top": None, "rising": rising}}
+
+
+def test_get_trend_keywords_uses_evergreen_niches_as_seeds(monkeypatch):
+    monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천", "공복 혈당 낮추는 법"])
+    fake = _FakePyTrends({
+        "배당주 추천": pd.DataFrame({"query": ["고배당 ETF 순위"]}),
+        "공복 혈당 낮추는 법": pd.DataFrame({"query": ["저탄수 식단 추천"]}),
+    })
+    monkeypatch.setattr(keywords, "TrendReq", lambda hl, tz: fake)
+
+    result = keywords.get_trend_keywords(limit=10)
+
+    assert result == ["고배당 ETF 순위", "저탄수 식단 추천"]
+    assert fake.built_seeds == ["배당주 추천", "공복 혈당 낮추는 법"]
+
+
+def test_get_trend_keywords_skips_seed_with_no_rising_data(monkeypatch):
+    monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천", "ETF 추천"])
+    fake = _FakePyTrends({"배당주 추천": None, "ETF 추천": pd.DataFrame({"query": ["ETF 추천 순위"]})})
+    monkeypatch.setattr(keywords, "TrendReq", lambda hl, tz: fake)
+
+    result = keywords.get_trend_keywords(limit=10)
+
+    assert result == ["ETF 추천 순위"]
+
+
+def test_get_trend_keywords_respects_limit(monkeypatch):
+    monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천"])
+    fake = _FakePyTrends({"배당주 추천": pd.DataFrame({"query": ["a", "b", "c"]})})
+    monkeypatch.setattr(keywords, "TrendReq", lambda hl, tz: fake)
+
+    result = keywords.get_trend_keywords(limit=2)
+
+    assert result == ["a", "b"]

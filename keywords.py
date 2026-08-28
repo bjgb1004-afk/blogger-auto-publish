@@ -7,14 +7,26 @@ import db
 EVERGREEN_KEYWORDS = {
     "주식/금융/재테크/경제": ["배당주 추천", "ETF 추천", "예적금 금리 비교", "청약통장 활용법"],
     "건강": ["공복 혈당 낮추는 법", "간헐적 단식 효과", "허리 디스크 스트레칭"],
-    "맛집": ["집들이 요리 추천", "혼밥 메뉴 추천", "다이어트 도시락 레시피"],
 }
 
 
 def get_trend_keywords(limit: int = 10) -> list:
     pytrends = TrendReq(hl="ko-KR", tz=540)
-    df = pytrends.trending_searches(pn="south_korea")
-    return df[0].tolist()[:limit]
+    results = []
+    for seed in get_evergreen_keywords():
+        if len(results) >= limit:
+            break
+        pytrends.build_payload([seed], timeframe="now 7-d", geo="KR")
+        related = pytrends.related_queries().get(seed, {})
+        rising = related.get("rising")
+        if rising is None:
+            continue
+        for q in rising["query"].tolist():
+            if q not in results:
+                results.append(q)
+            if len(results) >= limit:
+                break
+    return results[:limit]
 
 
 def get_evergreen_keywords() -> list:
