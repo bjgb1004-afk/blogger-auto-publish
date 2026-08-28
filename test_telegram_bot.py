@@ -47,9 +47,10 @@ def test_send_draft_notification_includes_warnings(monkeypatch):
 
 def test_get_events_parses_approve_and_count(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     updates = [
         {"update_id": 1, "callback_query": {"id": "cq1", "data": "approve:7"}},
-        {"update_id": 2, "message": {"text": "/count 3"}},
+        {"update_id": 2, "message": {"text": "/count 3", "chat": {"id": 123}}},
     ]
     monkeypatch.setattr(
         telegram_bot.requests, "get",
@@ -93,9 +94,10 @@ def test_answer_callback_posts_response(monkeypatch):
 
 def test_get_events_advances_offset_past_non_event_updates(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     updates = [
-        {"update_id": 5, "message": {"text": "hello"}},
-        {"update_id": 6, "message": {"text": "/count abc"}},
+        {"update_id": 5, "message": {"text": "hello", "chat": {"id": 123}}},
+        {"update_id": 6, "message": {"text": "/count abc", "chat": {"id": 123}}},
         {"update_id": 7, "callback_query": {"id": "cqX", "data": "approve:1"}},
     ]
     monkeypatch.setattr(
@@ -106,3 +108,33 @@ def test_get_events_advances_offset_past_non_event_updates(monkeypatch):
     assert next_offset == 8
     assert len(events) == 1
     assert events[0] == {"type": "approve", "draft_id": 1, "callback_query_id": "cqX"}
+
+
+def test_get_events_ignores_count_from_wrong_chat(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    updates = [
+        {"update_id": 1, "message": {"text": "/count 5", "chat": {"id": 999}}},
+    ]
+    monkeypatch.setattr(
+        telegram_bot.requests, "get",
+        lambda url, params, timeout: _FakeResp({"result": updates}),
+    )
+    events, next_offset = telegram_bot.get_events(offset=0)
+    assert events == []
+    assert next_offset == 2
+
+
+def test_get_events_clamps_count_value(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    updates = [
+        {"update_id": 1, "message": {"text": "/count 500", "chat": {"id": 123}}},
+    ]
+    monkeypatch.setattr(
+        telegram_bot.requests, "get",
+        lambda url, params, timeout: _FakeResp({"result": updates}),
+    )
+    events, next_offset = telegram_bot.get_events(offset=0)
+    assert events == []
+    assert next_offset == 2

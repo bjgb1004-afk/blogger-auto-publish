@@ -1,4 +1,6 @@
 import os.path
+from pathlib import Path
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -6,26 +8,28 @@ from googleapiclient.discovery import build
 
 # Blogger API 권한 범위 (글 작성, 수정, 삭제 권한)
 SCOPES = ['https://www.googleapis.com/auth/blogger']
+TOKEN_PATH = str(Path(__file__).parent / 'token.json')
+CREDENTIALS_PATH = str(Path(__file__).parent / 'credentials.json')
 
 # 1. API 로그인 인증 서비스 생성 함수
 def get_blogger_service():
     creds = None
     
     # 이전에 인증하여 자동 생성된 token.json 파일이 있는지 확인
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+
     # 토큰이 없거나 만료된 경우 로그인/인증 진행
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             # 프로젝트 폴더 내 credentials.json 파일을 읽어 인증 진행
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
             creds = flow.run_local_server(port=0)
-            
+
         # 인증 결과를 token.json 파일로 저장 (다음 실행 시 브라우저 로그인 생략)
-        with open('token.json', 'w') as token:
+        with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
 
     return build('blogger', 'v3', credentials=creds)

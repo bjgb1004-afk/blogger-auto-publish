@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from pathlib import Path
 
 import config
 import db
@@ -9,7 +10,7 @@ import telegram_bot
 
 MAX_RETRY = 5
 
-logging.basicConfig(filename="app.log", level=logging.INFO, format="%(asctime)s %(message)s")
+logging.basicConfig(filename=str(Path(__file__).parent / "app.log"), level=logging.INFO, format="%(asctime)s %(message)s")
 
 
 def run() -> None:
@@ -20,13 +21,27 @@ def run() -> None:
     for event in events:
         if event["type"] == "approve":
             db.update_status(event["draft_id"], "approved")
-            telegram_bot.answer_callback(event["callback_query_id"], "승인됨")
+            try:
+                telegram_bot.answer_callback(event["callback_query_id"], "승인됨")
+            except Exception as e:
+                logging.warning("answer_callback failed (likely expired callback query, safe to ignore): %s", e)
         elif event["type"] == "reject":
             db.update_status(event["draft_id"], "rejected")
-            telegram_bot.answer_callback(event["callback_query_id"], "거부됨")
+            try:
+                telegram_bot.answer_callback(event["callback_query_id"], "거부됨")
+            except Exception as e:
+                logging.warning("answer_callback failed (likely expired callback query, safe to ignore): %s", e)
         elif event["type"] == "count":
             config.set_daily_post_count(event["value"])
     db.set_meta("telegram_offset", str(next_offset))
+
+    for draft in db.get_pending_without_telegram_msg():
+        try:
+            msg_id = telegram_bot.send_draft_notification(draft["id"], draft["title"], draft["keyword"], warnings=None)
+            db.set_telegram_msg_id(draft["id"], msg_id)
+        except Exception as e:
+            logging.error("check_approvals: retry notify failed for draft %d: %s", draft["id"], e)
+            continue
 
     for draft in db.get_approved_unpublished():
         ok = post.post_to_blogger(
@@ -42,9 +57,13 @@ def run() -> None:
             logging.error("check_approvals: publish failed for draft %d (retry %d)", draft["id"], retry)
             if retry > MAX_RETRY:
                 telegram_bot.send_alert(f"발행 반복 실패: 초안 #{draft['id']} ({draft['title']})")
+                db.update_status(draft["id"], "failed")
 
 
 if __name__ == "__main__":
     from env_loader import load_env
     load_env()
-    run()
+    try:
+        run()
+    except Exception as e:
+        logging.error("run() crashed: %s: %s", type(e).__name__, str(e).replace(os.environ.get("TELEGRAM_BOT_TOKEN", ""), "***"))

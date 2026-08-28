@@ -1,4 +1,6 @@
 import logging
+import os
+from pathlib import Path
 
 import config
 import db
@@ -7,7 +9,7 @@ import keywords
 import telegram_bot
 import validate
 
-logging.basicConfig(filename="app.log", level=logging.INFO, format="%(asctime)s %(message)s")
+logging.basicConfig(filename=str(Path(__file__).parent / "app.log"), level=logging.INFO, format="%(asctime)s %(message)s")
 
 
 def run() -> int:
@@ -43,4 +45,7 @@ def run() -> int:
 if __name__ == "__main__":
     from env_loader import load_env
     load_env()
-    run()
+    try:
+        run()
+    except Exception as e:
+        logging.error("run() crashed: %s: %s", type(e).__name__, str(e).replace(os.environ.get("TELEGRAM_BOT_TOKEN", ""), "***"))

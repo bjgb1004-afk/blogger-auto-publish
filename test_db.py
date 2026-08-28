@@ -44,6 +44,18 @@ def test_increment_retry(tmp_path, monkeypatch):
     assert db.increment_retry(draft_id) == 2
 
 
+def test_get_pending_without_telegram_msg(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
+    db.init_db()
+    draft_id = db.insert_draft("k", "t", "c", [])
+    pending = db.get_pending_without_telegram_msg()
+    assert len(pending) == 1
+    assert pending[0]["id"] == draft_id
+
+    db.set_telegram_msg_id(draft_id, 123)
+    assert db.get_pending_without_telegram_msg() == []
+
+
 def test_meta_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
     db.init_db()

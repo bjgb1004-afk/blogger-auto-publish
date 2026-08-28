@@ -107,6 +107,19 @@ def increment_retry(draft_id: int) -> int:
     return row["c"]
 
 
+def get_pending_without_telegram_msg(days: int = 1) -> list:
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM drafts WHERE status = 'pending' AND telegram_msg_id IS NULL AND created_at >= ?",
+            (cutoff,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [dict(row) for row in rows]
+
+
 def get_approved_unpublished() -> list:
     conn = get_connection()
     try:

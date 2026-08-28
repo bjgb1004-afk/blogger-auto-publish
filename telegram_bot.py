@@ -48,11 +48,16 @@ def get_events(offset: int):
             if action in ("approve", "reject"):
                 events.append({"type": action, "draft_id": int(draft_id), "callback_query_id": cq["id"]})
         elif "message" in update:
+            chat_id = str(update["message"].get("chat", {}).get("id", ""))
+            if chat_id != os.environ["TELEGRAM_CHAT_ID"]:
+                continue
             text = update["message"].get("text", "")
             if text.startswith("/count"):
                 parts = text.split()
                 if len(parts) == 2 and parts[1].isdigit():
-                    events.append({"type": "count", "value": int(parts[1])})
+                    value = int(parts[1])
+                    if 1 <= value <= 20:
+                        events.append({"type": "count", "value": value})
     return events, next_offset
 
 
