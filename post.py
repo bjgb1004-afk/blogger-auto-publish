@@ -35,10 +35,10 @@ def get_blogger_service():
     return build('blogger', 'v3', credentials=creds)
 
 # 2. 구글 블로그에 글을 자동 포스팅하는 함수
-def post_to_blogger(blog_id, title, content, tags=[]):
+def post_to_blogger(blog_id, title, content, tags=[], search_description=""):
     try:
         service = get_blogger_service()
-        
+
         # 발행할 포스팅 데이터 구조
         body = {
             'kind': 'blogger#post',
@@ -46,7 +46,9 @@ def post_to_blogger(blog_id, title, content, tags=[]):
             'content': content,  # HTML 태그 지원 (<h2>, <p>, <img> 등)
             'labels': tags
         }
-        
+        if search_description:
+            body['searchDescription'] = search_description
+
         posts = service.posts()
         response = posts.insert(blogId=blog_id, body=body).execute()
         

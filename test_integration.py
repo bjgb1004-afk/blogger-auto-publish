@@ -37,7 +37,7 @@ def test_full_pending_to_approved_to_published_lifecycle(tmp_path, monkeypatch):
     approve_event = [{"type": "approve", "draft_id": draft_id, "callback_query_id": "cq1"}]
     monkeypatch.setattr(check_approvals.telegram_bot, "get_events", lambda offset: (approve_event, offset + 1))
     monkeypatch.setattr(check_approvals.telegram_bot, "answer_callback", lambda cq_id, text: None)
-    monkeypatch.setattr(check_approvals.post, "post_to_blogger", lambda blog_id, title, content, tags: True)
+    monkeypatch.setattr(check_approvals.post, "post_to_blogger", lambda blog_id, title, content, tags, search_description="": True)
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
 
     check_approvals.run()

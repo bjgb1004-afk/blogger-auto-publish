@@ -33,7 +33,7 @@ def test_run_creates_needed_count_and_skips_failed_keyword(monkeypatch):
     inserted = []
     monkeypatch.setattr(
         generate_drafts.db, "insert_draft",
-        lambda kw, t, c, tags: inserted.append(kw) or len(inserted),
+        lambda kw, t, c, tags, summary="": inserted.append(kw) or len(inserted),
     )
     monkeypatch.setattr(
         generate_drafts.telegram_bot, "send_draft_notification",
@@ -56,7 +56,7 @@ def test_run_passes_validation_warnings_to_telegram(monkeypatch):
         generate_drafts.generator, "generate_post",
         lambda keyword: {"title": "t", "content": "c", "tags": []},
     )
-    monkeypatch.setattr(generate_drafts.db, "insert_draft", lambda kw, t, c, tags: 1)
+    monkeypatch.setattr(generate_drafts.db, "insert_draft", lambda kw, t, c, tags, summary="": 1)
     monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
     monkeypatch.setattr(generate_drafts.validate, "check_draft", lambda title, content: ["본문이 짧음"])
 
@@ -84,7 +84,7 @@ def test_run_persists_draft_even_when_telegram_notification_fails(monkeypatch):
     inserted = []
     monkeypatch.setattr(
         generate_drafts.db, "insert_draft",
-        lambda kw, t, c, tags: inserted.append(kw) or 1,
+        lambda kw, t, c, tags, summary="": inserted.append(kw) or 1,
     )
 
     def raise_telegram_error(*args, **kwargs):
@@ -100,3 +100,27 @@ def test_run_persists_draft_even_when_telegram_notification_fails(monkeypatch):
     assert len(inserted) == 1
     assert inserted == ["k1"]
     assert created == 1
+
+
+def test_run_passes_generated_summary_to_insert_draft(monkeypatch):
+    monkeypatch.setattr(generate_drafts.db, "init_db", lambda: None)
+    monkeypatch.setattr(generate_drafts.config, "get_daily_post_count", lambda: 1)
+    monkeypatch.setattr(generate_drafts.db, "get_today_count", lambda: 0)
+    monkeypatch.setattr(generate_drafts.keywords, "get_keywords_to_use", lambda needed: ["k1"])
+    monkeypatch.setattr(
+        generate_drafts.generator, "generate_post",
+        lambda keyword: {"title": "t", "content": "c", "tags": [], "summary": "생성된 요약"},
+    )
+    monkeypatch.setattr(generate_drafts.validate, "check_draft", lambda title, content: [])
+    monkeypatch.setattr(generate_drafts.telegram_bot, "send_draft_notification", lambda draft_id, title, keyword, warnings=None: 1)
+    monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
+
+    captured = {}
+    monkeypatch.setattr(
+        generate_drafts.db, "insert_draft",
+        lambda kw, t, c, tags, summary="": captured.setdefault("summary", summary) or 1,
+    )
+
+    generate_drafts.run()
+
+    assert captured["summary"] == "생성된 요약"

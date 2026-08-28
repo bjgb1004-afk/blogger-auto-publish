@@ -49,6 +49,7 @@ def run() -> None:
             title=draft["title"],
             content=draft["content"],
             tags=json.loads(draft["tags"]),
+            search_description=draft.get("summary", ""),
         )
         if ok:
             db.update_status(draft["id"], "published")

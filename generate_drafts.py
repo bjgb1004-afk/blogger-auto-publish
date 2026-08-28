@@ -29,7 +29,10 @@ def run() -> int:
             logging.error("generate_drafts: gemini failed for %r: %s", keyword, e)
             continue
 
-        draft_id = db.insert_draft(keyword, post_data["title"], post_data["content"], post_data["tags"])
+        draft_id = db.insert_draft(
+            keyword, post_data["title"], post_data["content"], post_data["tags"],
+            summary=post_data.get("summary", ""),
+        )
         warnings = validate.check_draft(post_data["title"], post_data["content"])
         try:
             msg_id = telegram_bot.send_draft_notification(draft_id, post_data["title"], keyword, warnings)

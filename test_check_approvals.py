@@ -29,7 +29,7 @@ def test_run_processes_events_and_publishes(monkeypatch):
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
-        lambda blog_id, title, content, tags: True,
+        lambda blog_id, title, content, tags, search_description="": True,
     )
 
     check_approvals.run()
@@ -53,7 +53,7 @@ def test_run_retries_and_alerts_on_repeated_publish_failure(monkeypatch):
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
-        lambda blog_id, title, content, tags: False,
+        lambda blog_id, title, content, tags, search_description="": False,
     )
     monkeypatch.setattr(check_approvals.db, "increment_retry", lambda draft_id: 6)
     alerts = []
@@ -84,7 +84,7 @@ def test_run_does_not_alert_at_exactly_max_retry(monkeypatch):
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
-        lambda blog_id, title, content, tags: False,
+        lambda blog_id, title, content, tags, search_description="": False,
     )
     monkeypatch.setattr(check_approvals.db, "increment_retry", lambda draft_id: 5)
     alerts = []
@@ -161,3 +161,27 @@ def test_run_retries_notification_for_orphaned_pending_drafts(monkeypatch):
 
     assert notify_calls == [(3, "제목", "키워드", None)]
     assert msg_id_calls == [(3, 777)]
+
+
+def test_run_passes_stored_summary_as_search_description(monkeypatch):
+    monkeypatch.setattr(check_approvals.db, "init_db", lambda: None)
+    monkeypatch.setattr(check_approvals.db, "get_meta", lambda key, default=None: "0")
+    monkeypatch.setattr(check_approvals.telegram_bot, "get_events", lambda offset: ([], 0))
+    monkeypatch.setattr(check_approvals.db, "set_meta", lambda k, v: None)
+    monkeypatch.setattr(check_approvals.db, "get_pending_without_telegram_msg", lambda: [])
+    monkeypatch.setattr(
+        check_approvals.db, "get_approved_unpublished",
+        lambda: [{"id": 1, "title": "t", "content": "c", "tags": "[]", "summary": "저장된 요약"}],
+    )
+    monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
+    monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
+
+    captured = {}
+    monkeypatch.setattr(
+        check_approvals.post, "post_to_blogger",
+        lambda blog_id, title, content, tags, search_description="": captured.setdefault("sd", search_description) or True,
+    )
+
+    check_approvals.run()
+
+    assert captured["sd"] == "저장된 요약"
