@@ -62,3 +62,35 @@ def test_meta_roundtrip(tmp_path, monkeypatch):
     assert db.get_meta("telegram_offset", "0") == "0"
     db.set_meta("telegram_offset", "42")
     assert db.get_meta("telegram_offset") == "42"
+
+
+def test_insert_draft_persists_summary(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
+    db.init_db()
+    draft_id = db.insert_draft("k", "t", "c", [], summary="요약문")
+    conn = db.get_connection()
+    row = conn.execute("SELECT summary FROM drafts WHERE id = ?", (draft_id,)).fetchone()
+    conn.close()
+    assert row["summary"] == "요약문"
+
+
+def test_init_db_migrates_existing_table_without_summary_column(tmp_path, monkeypatch):
+    db_path = tmp_path / "legacy.db"
+    monkeypatch.setattr(db, "DB_PATH", db_path)
+    conn = db.get_connection()
+    conn.execute("""
+        CREATE TABLE drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,
+            tags TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL, telegram_msg_id INTEGER,
+            retry_count INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+    db.init_db()
+
+    cols = {row["name"] for row in db.get_connection().execute("PRAGMA table_info(drafts)")}
+    assert "summary" in cols
