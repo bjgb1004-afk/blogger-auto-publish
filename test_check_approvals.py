@@ -69,6 +69,7 @@ def test_run_prepends_generated_image_to_published_content(monkeypatch):
         lambda blog_id, title, content, tags, search_description="": captured.setdefault("content", content) or True,
     )
     monkeypatch.setattr(check_approvals.telegram_bot, "send_tistory_copy", lambda title, content, tags, summary="": None)
+    monkeypatch.setattr(check_approvals.generator, "rewrite_for_repost", lambda title, intro: {"title": title, "intro": intro})
 
     check_approvals.run()
 
@@ -244,6 +245,10 @@ def test_run_sends_tistory_copy_after_successful_publish(monkeypatch):
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": True,
     )
+    monkeypatch.setattr(
+        check_approvals.generator, "rewrite_for_repost",
+        lambda title, intro: {"title": "새 제목", "intro": "<p>새 도입부</p>"},
+    )
 
     captured = {}
     monkeypatch.setattr(
@@ -255,7 +260,7 @@ def test_run_sends_tistory_copy_after_successful_publish(monkeypatch):
 
     check_approvals.run()
 
-    assert captured == {"title": "제목", "content": "<p>c</p>", "tags": ["a", "b"], "summary": "요약"}
+    assert captured == {"title": "새 제목", "content": "<p>새 도입부</p>", "tags": ["a", "b"], "summary": "요약"}
 
 
 def test_run_skips_tistory_copy_when_publish_fails(monkeypatch):
@@ -282,3 +287,43 @@ def test_run_skips_tistory_copy_when_publish_fails(monkeypatch):
     check_approvals.run()
 
     assert called == []
+
+
+def test_vary_for_repost_rewrites_title_and_intro(monkeypatch):
+    monkeypatch.setattr(
+        check_approvals.generator, "rewrite_for_repost",
+        lambda title, intro: {"title": "새 제목", "intro": "<p>새 도입부</p>"},
+    )
+
+    title, content = check_approvals._vary_for_repost("원제목", "<p>원도입부</p><h2>소제목</h2>")
+
+    assert title == "새 제목"
+    assert content == "<p>새 도입부</p><h2>소제목</h2>"
+
+
+def test_vary_for_repost_keeps_leading_image_tag_intact(monkeypatch):
+    monkeypatch.setattr(
+        check_approvals.generator, "rewrite_for_repost",
+        lambda title, intro: {"title": "새 제목", "intro": "<p>새 도입부</p>"},
+    )
+
+    original = '<img src="https://example.com/x.jpg" />\n<p>원도입부</p><h2>소제목</h2>'
+    title, content = check_approvals._vary_for_repost("원제목", original)
+
+    assert content.startswith('<img src="https://example.com/x.jpg" />\n<p>새 도입부</p>')
+
+
+def test_vary_for_repost_falls_back_when_rewrite_fails(monkeypatch):
+    def boom(title, intro):
+        raise RuntimeError("gemini down")
+    monkeypatch.setattr(check_approvals.generator, "rewrite_for_repost", boom)
+
+    title, content = check_approvals._vary_for_repost("원제목", "<p>원도입부</p>")
+
+    assert (title, content) == ("원제목", "<p>원도입부</p>")
+
+
+def test_vary_for_repost_returns_unchanged_when_no_paragraph_found():
+    title, content = check_approvals._vary_for_repost("원제목", "<h2>소제목만 있음</h2>")
+
+    assert (title, content) == ("원제목", "<h2>소제목만 있음</h2>")

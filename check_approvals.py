@@ -2,10 +2,12 @@ import html
 import json
 import logging
 import os
+import re
 from pathlib import Path
 
 import config
 import db
+import generator
 import image_gen
 import post
 import telegram_bot
@@ -13,6 +15,18 @@ import telegram_bot
 MAX_RETRY = 5
 
 logging.basicConfig(filename=str(Path(__file__).parent / "app.log"), level=logging.INFO, format="%(asctime)s %(message)s")
+
+
+def _vary_for_repost(title: str, content: str) -> tuple:
+    match = re.search(r"<p>.*?</p>", content, re.DOTALL)
+    if not match:
+        return title, content
+    try:
+        rewritten = generator.rewrite_for_repost(title, match.group(0))
+    except Exception as e:
+        logging.warning("check_approvals: repost rewrite failed, using original text: %s", e)
+        return title, content
+    return rewritten["title"], content[:match.start()] + rewritten["intro"] + content[match.end():]
 
 
 def run() -> None:
@@ -68,8 +82,9 @@ def run() -> None:
         if ok:
             db.update_status(draft["id"], "published")
             try:
+                tistory_title, tistory_content = _vary_for_repost(draft["title"], content)
                 telegram_bot.send_tistory_copy(
-                    draft["title"], content, json.loads(draft["tags"]), draft.get("summary", "")
+                    tistory_title, tistory_content, json.loads(draft["tags"]), draft.get("summary", "")
                 )
             except Exception as e:
                 logging.error("check_approvals: tistory copy notify failed for draft %d: %s", draft["id"], e)

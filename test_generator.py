@@ -52,3 +52,17 @@ def test_generate_post_uses_client(monkeypatch):
     result = generator.generate_post("키워드")
     assert result["title"] == "제목"
     assert result["tags"] == ["x"]
+
+
+def test_rewrite_for_repost_returns_new_title_and_intro(monkeypatch):
+    fake_text = '{"title": "새 제목", "intro": "<p>새 도입부</p>"}'
+    monkeypatch.setattr(generator, "_get_client", lambda: _FakeClient(fake_text))
+    result = generator.rewrite_for_repost("원래 제목", "<p>원래 도입부</p>")
+    assert result == {"title": "새 제목", "intro": "<p>새 도입부</p>"}
+
+
+def test_rewrite_for_repost_strips_markdown_fence(monkeypatch):
+    fake_text = '```json\n{"title": "새 제목", "intro": "<p>새 도입부</p>"}\n```'
+    monkeypatch.setattr(generator, "_get_client", lambda: _FakeClient(fake_text))
+    result = generator.rewrite_for_repost("원래 제목", "<p>원래 도입부</p>")
+    assert result["title"] == "새 제목"

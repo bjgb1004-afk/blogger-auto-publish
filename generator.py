@@ -22,6 +22,15 @@ PROMPT_TEMPLATE = """너는 블로그 작가다. 아래 키워드로 블로그 �
 {{"title": "글 제목", "content": "HTML 본문", "tags": ["태그1", "태그2"], "summary": "검색결과용 요약", "health_topic_en": "PubMed 검색어 또는 빈 문자열"}}
 """
 
+REPOST_PROMPT_TEMPLATE = """아래는 이미 다른 블로그에 발행한 글의 제목과 도입부다. 같은 내용을 다른 블로그에도 올릴 건데, 검색엔진에 중복 콘텐츠로 안 걸리도록 제목과 도입부만 다른 표현으로 바꿔써라. 의미와 핵심 정보는 그대로 유지해라.
+
+원본 제목: {title}
+원본 도입부: {intro}
+
+아래 JSON 형식으로만 답해라. 다른 텍스트 붙이지 마라.
+{{"title": "새 제목", "intro": "새 도입부 (HTML <p> 태그 포함)"}}
+"""
+
 
 def _get_client():
     global _client
@@ -30,13 +39,17 @@ def _get_client():
     return _client
 
 
-def _parse_response(text: str) -> dict:
+def _strip_markdown_fence(text: str) -> str:
     cleaned = text.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.split("```")[1]
         if cleaned.startswith("json"):
             cleaned = cleaned[4:]
-    data = json.loads(cleaned.strip())
+    return cleaned.strip()
+
+
+def _parse_response(text: str) -> dict:
+    data = json.loads(_strip_markdown_fence(text))
     return {
         "title": data["title"],
         "content": data["content"],
@@ -53,3 +66,13 @@ def generate_post(keyword: str) -> dict:
         contents=prompt,
     )
     return _parse_response(response.text)
+
+
+def rewrite_for_repost(title: str, intro_html: str) -> dict:
+    prompt = REPOST_PROMPT_TEMPLATE.format(title=title, intro=intro_html)
+    response = _get_client().models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt,
+    )
+    data = json.loads(_strip_markdown_fence(response.text))
+    return {"title": data["title"], "intro": data["intro"]}
