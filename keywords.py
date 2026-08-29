@@ -3,6 +3,7 @@ import logging
 from pytrends.request import TrendReq
 
 import db
+import naver_trends
 
 EVERGREEN_KEYWORDS = {
     "주식/금융/재테크/경제": ["배당주 추천", "ETF 추천", "예적금 금리 비교", "청약통장 활용법"],
@@ -45,11 +46,16 @@ def get_keywords_to_use(needed_count: int) -> list:
         logging.warning("get_trend_keywords failed, falling back to evergreen only: %s", e)
     candidates.extend(get_evergreen_keywords())
 
-    result = []
+    unique = []
     for kw in candidates:
-        if kw in recent or kw in result:
+        if kw in recent or kw in unique:
             continue
-        result.append(kw)
-        if len(result) >= needed_count:
-            break
-    return result
+        unique.append(kw)
+
+    try:
+        scores = naver_trends.get_trend_scores(unique)
+        unique.sort(key=lambda kw: scores.get(kw, 0), reverse=True)
+    except Exception as e:
+        logging.warning("naver_trends failed, keeping original order: %s", e)
+
+    return unique[:needed_count]

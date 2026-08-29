@@ -16,6 +16,7 @@ def test_get_evergreen_keywords_nonempty():
 def test_get_keywords_to_use_excludes_recent(monkeypatch):
     monkeypatch.setattr(keywords, "get_trend_keywords", lambda limit=10: ["트렌드1", "트렌드2"])
     monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: {"트렌드1"})
+    monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", lambda kws: {})
     result = keywords.get_keywords_to_use(needed_count=2)
     assert "트렌드1" not in result
     assert len(result) == 2
@@ -26,8 +27,37 @@ def test_get_keywords_to_use_falls_back_when_trends_fail(monkeypatch):
         raise RuntimeError("network down")
     monkeypatch.setattr(keywords, "get_trend_keywords", boom)
     monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
+    monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", lambda kws: {})
     result = keywords.get_keywords_to_use(needed_count=1)
     assert len(result) == 1
+
+
+def test_get_keywords_to_use_prioritizes_higher_naver_trend_score(monkeypatch):
+    monkeypatch.setattr(keywords, "get_trend_keywords", lambda limit=10: [])
+    monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천", "ETF 추천", "예적금 금리 비교"])
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
+    monkeypatch.setattr(
+        keywords.naver_trends, "get_trend_scores",
+        lambda kws: {"배당주 추천": 10.0, "ETF 추천": 80.0, "예적금 금리 비교": 30.0},
+    )
+
+    result = keywords.get_keywords_to_use(needed_count=3)
+
+    assert result == ["ETF 추천", "예적금 금리 비교", "배당주 추천"]
+
+
+def test_get_keywords_to_use_keeps_order_when_naver_lookup_fails(monkeypatch):
+    monkeypatch.setattr(keywords, "get_trend_keywords", lambda limit=10: [])
+    monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천", "ETF 추천"])
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
+
+    def boom(kws):
+        raise RuntimeError("naver api down")
+    monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", boom)
+
+    result = keywords.get_keywords_to_use(needed_count=2)
+
+    assert result == ["배당주 추천", "ETF 추천"]
 
 
 class _FakePyTrends:
