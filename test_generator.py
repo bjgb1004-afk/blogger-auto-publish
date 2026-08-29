@@ -4,7 +4,16 @@ import generator
 def test_parse_response_plain_json():
     text = '{"title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"], "summary": "요약"}'
     result = generator._parse_response(text)
-    assert result == {"title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"], "summary": "요약"}
+    assert result == {
+        "title": "제목", "content": "<p>본문</p>", "tags": ["a", "b"],
+        "summary": "요약", "health_topic_en": "",
+    }
+
+
+def test_parse_response_passes_through_health_topic_en():
+    text = '{"title": "제목", "content": "<p>c</p>", "health_topic_en": "cortisol stress"}'
+    result = generator._parse_response(text)
+    assert result["health_topic_en"] == "cortisol stress"
 
 
 def test_parse_response_defaults_summary_when_missing():

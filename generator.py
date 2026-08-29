@@ -16,9 +16,10 @@ PROMPT_TEMPLATE = """너는 블로그 작가다. 아래 키워드로 블로그 �
 - 이 글이 투자/재테크/주식 관련이면 마지막 문단에 "이 글은 투자 조언이 아닌 일반 정보이며, 투자 판단과 책임은 본인에게 있습니다."를 포함해라. 건강/의료 관련이면 "본 내용은 일반 정보이며, 정확한 진단과 처방은 반드시 의료 전문가와 상담하세요."를 포함해라.
 - 본문은 <h2>, <p>, <strong> 태그를 쓴 HTML로 작성해라.
 - summary 필드에는 검색결과 요약(메타 설명)으로 쓸 1~2문장을 80자 내외로 작성해라.
+- 이 글이 건강/의료 관련이면, 본문 핵심 주제를 PubMed 검색에 적합한 영어 키워드 3~6단어로 만들어 health_topic_en 필드에 넣어라(예: "cortisol stress recovery exercise"). 실제 논문 제목이나 저자를 지어내지 말고 검색어만 만들어라. 건강/의료 글이 아니면 health_topic_en은 빈 문자열로 둬라.
 - 아래 JSON 형식으로만 답해라. 다른 텍스트 붙이지 마라.
 
-{{"title": "글 제목", "content": "HTML 본문", "tags": ["태그1", "태그2"], "summary": "검색결과용 요약"}}
+{{"title": "글 제목", "content": "HTML 본문", "tags": ["태그1", "태그2"], "summary": "검색결과용 요약", "health_topic_en": "PubMed 검색어 또는 빈 문자열"}}
 """
 
 
@@ -41,6 +42,7 @@ def _parse_response(text: str) -> dict:
         "content": data["content"],
         "tags": data.get("tags", []),
         "summary": data.get("summary", ""),
+        "health_topic_en": data.get("health_topic_en", ""),
     }
 
 

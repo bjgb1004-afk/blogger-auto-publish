@@ -31,7 +31,7 @@ def test_run_processes_events_and_publishes(monkeypatch):
         lambda: [{"id": 1, "title": "t", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_data_uri", lambda keyword: None)
+    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": True,
@@ -57,8 +57,8 @@ def test_run_prepends_generated_image_to_published_content(monkeypatch):
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
     monkeypatch.setattr(
-        check_approvals.image_gen, "generate_image_data_uri",
-        lambda keyword: "data:image/jpeg;base64,ZmFrZQ==",
+        check_approvals.image_gen, "generate_image_url",
+        lambda keyword: "https://image.pollinations.ai/prompt/fake?seed=1",
     )
     monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
 
@@ -70,7 +70,7 @@ def test_run_prepends_generated_image_to_published_content(monkeypatch):
 
     check_approvals.run()
 
-    assert captured["content"].startswith('<img src="data:image/jpeg;base64,ZmFrZQ=="')
+    assert captured["content"].startswith('<img src="https://image.pollinations.ai/prompt/fake?seed=1"')
     assert captured["content"].endswith("<p>body</p>")
 
 
@@ -85,7 +85,7 @@ def test_run_retries_and_alerts_on_repeated_publish_failure(monkeypatch):
         lambda: [{"id": 9, "title": "t", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_data_uri", lambda keyword: None)
+    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": False,
@@ -117,7 +117,7 @@ def test_run_does_not_alert_at_exactly_max_retry(monkeypatch):
         lambda: [{"id": 9, "title": "t", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_data_uri", lambda keyword: None)
+    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": False,
@@ -210,7 +210,7 @@ def test_run_passes_stored_summary_as_search_description(monkeypatch):
         lambda: [{"id": 1, "title": "t", "content": "c", "tags": "[]", "summary": "저장된 요약", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_data_uri", lambda keyword: None)
+    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
 
     captured = {}

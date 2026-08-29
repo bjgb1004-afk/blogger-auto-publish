@@ -1,3 +1,4 @@
+import html
 import logging
 import os
 from pathlib import Path
@@ -6,6 +7,7 @@ import config
 import db
 import generator
 import keywords
+import pubmed
 import telegram_bot
 import validate
 
@@ -32,14 +34,23 @@ def run() -> int:
             logging.error("generate_drafts: gemini failed for %r: %s", keyword, e)
             continue
 
+        content = post_data["content"]
+        study = pubmed.find_study(post_data.get("health_topic_en", ""))
+        if study and study["title"]:
+            content += (
+                f'\n<p><strong>참고 연구:</strong> "{html.escape(study["title"])}" '
+                f'({html.escape(study["journal"])}, {study["year"]}) — '
+                f'<a href="{study["url"]}" target="_blank" rel="noopener">원문 보기</a></p>'
+            )
+
         draft_id = db.insert_draft(
-            keyword, post_data["title"], post_data["content"], post_data["tags"],
+            keyword, post_data["title"], content, post_data["tags"],
             summary=post_data.get("summary", ""),
         )
-        warnings = validate.check_draft(post_data["title"], post_data["content"])
+        warnings = validate.check_draft(post_data["title"], content)
         try:
             msg_id = telegram_bot.send_draft_notification(
-                draft_id, post_data["title"], keyword, warnings, content=post_data["content"]
+                draft_id, post_data["title"], keyword, warnings, content=content
             )
             db.set_telegram_msg_id(draft_id, msg_id)
         except Exception as e:
