@@ -1,3 +1,4 @@
+import html
 import json
 import logging
 import os
@@ -5,6 +6,7 @@ from pathlib import Path
 
 import config
 import db
+import image_gen
 import post
 import telegram_bot
 
@@ -50,10 +52,16 @@ def run() -> None:
             continue
 
     for draft in db.get_approved_unpublished():
+        content = draft["content"]
+        image_uri = image_gen.generate_image_data_uri(draft["keyword"])
+        if image_uri:
+            alt = html.escape(draft["title"])
+            content = f'<img src="{image_uri}" alt="{alt}" style="max-width:100%;height:auto;border-radius:8px;" />\n' + content
+
         ok = post.post_to_blogger(
             blog_id=os.environ["BLOGGER_BLOG_ID"],
             title=draft["title"],
-            content=draft["content"],
+            content=content,
             tags=json.loads(draft["tags"]),
             search_description=draft.get("summary", ""),
         )
