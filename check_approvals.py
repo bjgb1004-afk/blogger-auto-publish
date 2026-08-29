@@ -67,6 +67,12 @@ def run() -> None:
         )
         if ok:
             db.update_status(draft["id"], "published")
+            try:
+                telegram_bot.send_tistory_copy(
+                    draft["title"], content, json.loads(draft["tags"]), draft.get("summary", "")
+                )
+            except Exception as e:
+                logging.error("check_approvals: tistory copy notify failed for draft %d: %s", draft["id"], e)
         else:
             retry = db.increment_retry(draft["id"])
             logging.error("check_approvals: publish failed for draft %d (retry %d)", draft["id"], retry)

@@ -36,6 +36,7 @@ def test_run_processes_events_and_publishes(monkeypatch):
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": True,
     )
+    monkeypatch.setattr(check_approvals.telegram_bot, "send_tistory_copy", lambda title, content, tags, summary="": None)
 
     check_approvals.run()
 
@@ -67,6 +68,7 @@ def test_run_prepends_generated_image_to_published_content(monkeypatch):
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": captured.setdefault("content", content) or True,
     )
+    monkeypatch.setattr(check_approvals.telegram_bot, "send_tistory_copy", lambda title, content, tags, summary="": None)
 
     check_approvals.run()
 
@@ -218,7 +220,65 @@ def test_run_passes_stored_summary_as_search_description(monkeypatch):
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": captured.setdefault("sd", search_description) or True,
     )
+    monkeypatch.setattr(check_approvals.telegram_bot, "send_tistory_copy", lambda title, content, tags, summary="": None)
 
     check_approvals.run()
 
     assert captured["sd"] == "저장된 요약"
+
+
+def test_run_sends_tistory_copy_after_successful_publish(monkeypatch):
+    monkeypatch.setattr(check_approvals.db, "init_db", lambda: None)
+    monkeypatch.setattr(check_approvals.db, "get_meta", lambda key, default=None: "0")
+    monkeypatch.setattr(check_approvals.telegram_bot, "get_events", lambda offset: ([], 0))
+    monkeypatch.setattr(check_approvals.db, "set_meta", lambda k, v: None)
+    monkeypatch.setattr(check_approvals.db, "get_pending_without_telegram_msg", lambda: [])
+    monkeypatch.setattr(
+        check_approvals.db, "get_approved_unpublished",
+        lambda: [{"id": 1, "title": "제목", "content": "<p>c</p>", "tags": '["a", "b"]', "summary": "요약", "keyword": "kw"}],
+    )
+    monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
+    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
+    monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
+    monkeypatch.setattr(
+        check_approvals.post, "post_to_blogger",
+        lambda blog_id, title, content, tags, search_description="": True,
+    )
+
+    captured = {}
+    monkeypatch.setattr(
+        check_approvals.telegram_bot, "send_tistory_copy",
+        lambda title, content, tags, summary="": captured.update(
+            title=title, content=content, tags=tags, summary=summary
+        ),
+    )
+
+    check_approvals.run()
+
+    assert captured == {"title": "제목", "content": "<p>c</p>", "tags": ["a", "b"], "summary": "요약"}
+
+
+def test_run_skips_tistory_copy_when_publish_fails(monkeypatch):
+    monkeypatch.setattr(check_approvals.db, "init_db", lambda: None)
+    monkeypatch.setattr(check_approvals.db, "get_meta", lambda key, default=None: "0")
+    monkeypatch.setattr(check_approvals.telegram_bot, "get_events", lambda offset: ([], 0))
+    monkeypatch.setattr(check_approvals.db, "set_meta", lambda k, v: None)
+    monkeypatch.setattr(check_approvals.db, "get_pending_without_telegram_msg", lambda: [])
+    monkeypatch.setattr(
+        check_approvals.db, "get_approved_unpublished",
+        lambda: [{"id": 1, "title": "제목", "content": "c", "tags": "[]", "keyword": "kw"}],
+    )
+    monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
+    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
+    monkeypatch.setattr(check_approvals.post, "post_to_blogger", lambda blog_id, title, content, tags, search_description="": False)
+    monkeypatch.setattr(check_approvals.db, "increment_retry", lambda draft_id: 1)
+
+    called = []
+    monkeypatch.setattr(
+        check_approvals.telegram_bot, "send_tistory_copy",
+        lambda title, content, tags, summary="": called.append(True),
+    )
+
+    check_approvals.run()
+
+    assert called == []

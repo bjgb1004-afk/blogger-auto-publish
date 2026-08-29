@@ -5,6 +5,7 @@ import requests
 
 API_BASE = "https://api.telegram.org/bot{token}/{method}"
 PREVIEW_LENGTH = 800
+TISTORY_CHUNK_SIZE = 3500
 
 
 def _url(method: str) -> str:
@@ -40,10 +41,25 @@ def send_draft_notification(draft_id: int, title: str, keyword: str, warnings: l
     return resp.json()["result"]["message_id"]
 
 
-def send_alert(text: str) -> None:
+def _send_text(text: str) -> None:
     payload = {"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": text}
     resp = requests.post(_url("sendMessage"), json=payload, timeout=10)
     resp.raise_for_status()
+
+
+def send_tistory_copy(title: str, content: str, tags: list, summary: str = "") -> None:
+    header = f"📋 티스토리용 원고 - {title}\n\n태그: {', '.join(tags)}"
+    if summary:
+        header += f"\n메타설명: {summary}"
+    header += "\n\n아래 HTML을 티스토리 에디터 'HTML' 모드에 순서대로 붙여넣으세요."
+    _send_text(header)
+
+    for i in range(0, len(content), TISTORY_CHUNK_SIZE):
+        _send_text(content[i:i + TISTORY_CHUNK_SIZE])
+
+
+def send_alert(text: str) -> None:
+    _send_text(text)
 
 
 def get_events(offset: int):

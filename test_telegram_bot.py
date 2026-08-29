@@ -113,6 +113,42 @@ def test_send_alert_posts_message(monkeypatch):
     assert captured["json"]["chat_id"] == "123"
 
 
+def test_send_tistory_copy_sends_header_then_content(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    sent = []
+
+    def fake_post(url, json, timeout):
+        sent.append(json["text"])
+        return _FakeResp({})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    telegram_bot.send_tistory_copy("제목", "<p>본문</p>", ["a", "b"], summary="요약")
+
+    assert "제목" in sent[0]
+    assert "a, b" in sent[0]
+    assert "요약" in sent[0]
+    assert sent[1] == "<p>본문</p>"
+
+
+def test_send_tistory_copy_chunks_long_content(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    sent = []
+
+    def fake_post(url, json, timeout):
+        sent.append(json["text"])
+        return _FakeResp({})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    long_content = "가" * 8000
+    telegram_bot.send_tistory_copy("제목", long_content, [])
+
+    body_chunks = sent[1:]
+    assert len(body_chunks) == 3
+    assert "".join(body_chunks) == long_content
+
+
 def test_answer_callback_posts_response(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
     captured = {}
