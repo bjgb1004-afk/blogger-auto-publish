@@ -30,6 +30,22 @@ def test_send_draft_notification(monkeypatch):
     assert "approve:5" in str(captured["json"]["reply_markup"])
 
 
+def test_send_draft_notification_includes_image_command(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    captured = {}
+
+    def fake_post(url, json, timeout):
+        captured["json"] = json
+        return _FakeResp({"result": {"message_id": 1}})
+
+    monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
+    telegram_bot.send_draft_notification(5, "제목", "키워드", image_prompt_en="lower back spine anatomy diagram")
+    text = captured["json"]["text"]
+    assert "lower back spine anatomy diagram" in text
+    assert "얼굴" in text
+
+
 def test_send_draft_notification_includes_content_preview_without_html(monkeypatch):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")

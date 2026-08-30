@@ -33,7 +33,6 @@ def test_run_processes_events_and_publishes(monkeypatch):
         lambda: [{"id": 1, "title": "t", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": True,
@@ -49,7 +48,7 @@ def test_run_processes_events_and_publishes(monkeypatch):
     assert any("승인" in a for a in alerts)
 
 
-def test_run_prepends_generated_image_to_published_content(monkeypatch):
+def test_run_publishes_content_unchanged_without_auto_image(monkeypatch):
     monkeypatch.setattr(check_approvals.db, "init_db", lambda: None)
     monkeypatch.setattr(check_approvals.db, "get_meta", lambda key, default=None: "0")
     monkeypatch.setattr(check_approvals.telegram_bot, "get_events", lambda offset: ([], 0))
@@ -60,10 +59,6 @@ def test_run_prepends_generated_image_to_published_content(monkeypatch):
         lambda: [{"id": 1, "title": "t", "content": "<p>body</p>", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(
-        check_approvals.image_gen, "generate_image_url",
-        lambda keyword: "https://image.pollinations.ai/prompt/fake?seed=1",
-    )
     monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
 
     captured = {}
@@ -76,8 +71,7 @@ def test_run_prepends_generated_image_to_published_content(monkeypatch):
 
     check_approvals.run()
 
-    assert captured["content"].startswith('<img src="https://image.pollinations.ai/prompt/fake?seed=1"')
-    assert captured["content"].endswith("<p>body</p>")
+    assert captured["content"] == "<p>body</p>"
 
 
 def test_run_retries_and_alerts_on_repeated_publish_failure(monkeypatch):
@@ -91,7 +85,6 @@ def test_run_retries_and_alerts_on_repeated_publish_failure(monkeypatch):
         lambda: [{"id": 9, "title": "t", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": False,
@@ -123,7 +116,6 @@ def test_run_does_not_alert_at_exactly_max_retry(monkeypatch):
         lambda: [{"id": 9, "title": "t", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
         lambda blog_id, title, content, tags, search_description="": False,
@@ -191,7 +183,7 @@ def test_run_retries_notification_for_orphaned_pending_drafts(monkeypatch):
 
     notify_calls = []
 
-    def fake_send_draft_notification(draft_id, title, keyword, warnings=None, content=""):
+    def fake_send_draft_notification(draft_id, title, keyword, warnings=None, content="", image_prompt_en=""):
         notify_calls.append((draft_id, title, keyword, warnings))
         return 777
 
@@ -220,7 +212,6 @@ def test_run_passes_stored_summary_as_search_description(monkeypatch):
         lambda: [{"id": 1, "title": "t", "content": "c", "tags": "[]", "summary": "저장된 요약", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
 
     captured = {}
@@ -246,7 +237,6 @@ def test_run_sends_tistory_copy_after_successful_publish(monkeypatch):
         lambda: [{"id": 1, "title": "제목", "content": "<p>c</p>", "tags": '["a", "b"]', "summary": "요약", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(check_approvals.db, "update_status", lambda draft_id, status: None)
     monkeypatch.setattr(
         check_approvals.post, "post_to_blogger",
@@ -281,7 +271,6 @@ def test_run_skips_tistory_copy_when_publish_fails(monkeypatch):
         lambda: [{"id": 1, "title": "제목", "content": "c", "tags": "[]", "keyword": "kw"}],
     )
     monkeypatch.setenv("BLOGGER_BLOG_ID", "blog123")
-    monkeypatch.setattr(check_approvals.image_gen, "generate_image_url", lambda keyword: None)
     monkeypatch.setattr(check_approvals.post, "post_to_blogger", lambda blog_id, title, content, tags, search_description="": False)
     monkeypatch.setattr(check_approvals.db, "increment_retry", lambda draft_id: 1)
 

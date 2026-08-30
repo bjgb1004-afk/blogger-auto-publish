@@ -5,7 +5,7 @@ import urllib.parse
 import requests
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/{prompt}"
-PROMPT_TEMPLATE = "flat vector illustration, {keyword}, no text, clean minimal style, high quality"
+PROMPT_TEMPLATE = "flat vector illustration, {keyword}, no text, no face, no people, clean minimal style, high quality"
 TIMEOUT = 30
 
 

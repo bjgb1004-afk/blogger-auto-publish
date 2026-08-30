@@ -51,7 +51,8 @@ def run() -> int:
         warnings = validate.check_draft(post_data["title"], content)
         try:
             msg_id = telegram_bot.send_draft_notification(
-                draft_id, post_data["title"], keyword, warnings, content=content
+                draft_id, post_data["title"], keyword, warnings, content=content,
+                image_prompt_en=post_data.get("image_prompt_en", ""),
             )
             db.set_telegram_msg_id(draft_id, msg_id)
         except Exception as e:

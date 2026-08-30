@@ -24,7 +24,7 @@ PROMPT_TEMPLATE = """너는 블로그 작가다. 아래 키워드로 블로그 �
 - 본문은 <h2>, <p>, <strong> 태그를 쓴 HTML로 작성해라.
 - summary 필드에는 검색결과 요약(메타 설명)으로 쓸 1~2문장을 80자 내외로 작성해라.
 - 이 글이 건강/의료 관련이면, 본문 핵심 주제를 PubMed 검색에 적합한 영어 키워드 3~6단어로 만들어 health_topic_en 필드에 넣어라(예: "cortisol stress recovery exercise"). 실제 논문 제목이나 저자를 지어내지 말고 검색어만 만들어라. 건강/의료 글이 아니면 health_topic_en은 빈 문자열로 둬라.
-- 본문 핵심 내용을 대표하는 삽화 장면을 영어 3~6단어로 만들어 image_prompt_en 필드에 넣어라(예: "person checking dividend stock chart"). AI 이미지 생성용 프롬프트이니 반드시 영어로, 글 내용과 직접 관련된 구체적 장면으로 써라.
+- 본문 핵심 내용을 대표하는 삽화 장면을 영어 3~6단어로 만들어 image_prompt_en 필드에 넣어라(예: "dividend stock chart on smartphone", "lower back spine anatomy diagram"). AI 이미지 생성용 프롬프트이니 반드시 영어로, 글 내용과 직접 관련된 구체적 사물·신체부위·상황 중심으로 써라. 사람 얼굴이나 특정 인물이 등장하는 장면은 절대 쓰지 마라(얼굴이 무작위로 엉뚱하게 그려짐).
 - 아래 JSON 형식으로만 답해라. 다른 텍스트 붙이지 마라.
 
 {{"title": "글 제목", "content": "HTML 본문", "tags": ["태그1", "태그2"], "summary": "검색결과용 요약", "health_topic_en": "PubMed 검색어 또는 빈 문자열", "image_prompt_en": "삽화 장면 영어 3~6단어"}}

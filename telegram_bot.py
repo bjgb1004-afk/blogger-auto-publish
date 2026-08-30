@@ -20,12 +20,24 @@ def _preview(content: str) -> str:
     return plain
 
 
-def send_draft_notification(draft_id: int, title: str, keyword: str, warnings: list = None, content: str = "") -> int:
+def _image_command(image_prompt_en: str) -> str:
+    return (
+        f'"{image_prompt_en}" 주제로 블로그 삽화 이미지 만들어줘. '
+        "플랫 벡터 일러스트 스타일, 미니멀하고 깔끔한 색감, 16:9 비율, "
+        "텍스트 없이, 사람 얼굴이나 인물 없이 사물·상황 중심으로."
+    )
+
+
+def send_draft_notification(
+    draft_id: int, title: str, keyword: str, warnings: list = None, content: str = "", image_prompt_en: str = ""
+) -> int:
     text = f"[초안 #{draft_id}] {title}\n키워드: {keyword}"
     if warnings:
         text += "\n⚠ " + "; ".join(warnings)
     if content:
         text += "\n\n" + _preview(content)
+    if image_prompt_en:
+        text += "\n\n🎨 이미지 생성 명령어(나노바나나 등에 붙여넣기):\n" + _image_command(image_prompt_en)
     payload = {
         "chat_id": os.environ["TELEGRAM_CHAT_ID"],
         "text": text,

@@ -1,4 +1,3 @@
-import html
 import json
 import logging
 import os
@@ -8,7 +7,6 @@ from pathlib import Path
 import config
 import db
 import generator
-import image_gen
 import post
 import telegram_bot
 
@@ -68,7 +66,8 @@ def run() -> None:
     for draft in db.get_pending_without_telegram_msg():
         try:
             msg_id = telegram_bot.send_draft_notification(
-                draft["id"], draft["title"], draft["keyword"], warnings=None, content=draft.get("content", "")
+                draft["id"], draft["title"], draft["keyword"], warnings=None, content=draft.get("content", ""),
+                image_prompt_en=draft.get("image_prompt_en", ""),
             )
             db.set_telegram_msg_id(draft["id"], msg_id)
         except Exception as e:
@@ -77,10 +76,6 @@ def run() -> None:
 
     for draft in db.get_approved_unpublished():
         content = draft["content"]
-        image_url = image_gen.generate_image_url(draft.get("image_prompt_en") or draft["keyword"])
-        if image_url:
-            alt = html.escape(draft["title"])
-            content = f'<img src="{image_url}" alt="{alt}" style="max-width:100%;height:auto;border-radius:8px;" />\n' + content
 
         ok = post.post_to_blogger(
             blog_id=os.environ["BLOGGER_BLOG_ID"],

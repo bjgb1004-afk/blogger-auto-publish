@@ -37,7 +37,7 @@ def test_run_creates_needed_count_and_skips_failed_keyword(monkeypatch):
     )
     monkeypatch.setattr(
         generate_drafts.telegram_bot, "send_draft_notification",
-        lambda draft_id, title, keyword, warnings=None, content="": 111,
+        lambda draft_id, title, keyword, warnings=None, content="", image_prompt_en="": 111,
     )
     monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
     monkeypatch.setattr(generate_drafts.validate, "check_draft", lambda title, content: [])
@@ -65,7 +65,7 @@ def test_run_passes_validation_warnings_to_telegram(monkeypatch):
     captured = {}
     monkeypatch.setattr(
         generate_drafts.telegram_bot, "send_draft_notification",
-        lambda draft_id, title, keyword, warnings=None, content="": captured.setdefault("warnings", warnings) or 1,
+        lambda draft_id, title, keyword, warnings=None, content="", image_prompt_en="": captured.setdefault("warnings", warnings) or 1,
     )
 
     generate_drafts.run()
@@ -116,7 +116,7 @@ def test_run_passes_generated_summary_to_insert_draft(monkeypatch):
     )
     monkeypatch.setattr(generate_drafts.validate, "check_draft", lambda title, content: [])
     monkeypatch.setattr(generate_drafts.pubmed, "find_study", lambda topic: None)
-    monkeypatch.setattr(generate_drafts.telegram_bot, "send_draft_notification", lambda draft_id, title, keyword, warnings=None, content="": 1)
+    monkeypatch.setattr(generate_drafts.telegram_bot, "send_draft_notification", lambda draft_id, title, keyword, warnings=None, content="", image_prompt_en="": 1)
     monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
 
     captured = {}
@@ -150,7 +150,7 @@ def test_run_appends_pubmed_citation_for_health_posts(monkeypatch):
             "year": "2021", "url": "https://pubmed.ncbi.nlm.nih.gov/999/",
         },
     )
-    monkeypatch.setattr(generate_drafts.telegram_bot, "send_draft_notification", lambda draft_id, title, keyword, warnings=None, content="": 1)
+    monkeypatch.setattr(generate_drafts.telegram_bot, "send_draft_notification", lambda draft_id, title, keyword, warnings=None, content="", image_prompt_en="": 1)
     monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
 
     captured = {}
