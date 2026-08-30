@@ -43,6 +43,11 @@ def run() -> None:
                 )
             except Exception as e:
                 logging.warning("answer_callback failed (likely expired callback query, safe to ignore): %s", e)
+            if applied:
+                try:
+                    telegram_bot.send_alert(f"✅ 초안 #{event['draft_id']} 승인 처리됨 — 발행 대기열에 등록")
+                except Exception as e:
+                    logging.warning("approve confirmation notify failed: %s", e)
         elif event["type"] == "reject":
             applied = db.set_status_if_pending(event["draft_id"], "rejected")
             try:
@@ -51,6 +56,11 @@ def run() -> None:
                 )
             except Exception as e:
                 logging.warning("answer_callback failed (likely expired callback query, safe to ignore): %s", e)
+            if applied:
+                try:
+                    telegram_bot.send_alert(f"❌ 초안 #{event['draft_id']} 거부 처리됨")
+                except Exception as e:
+                    logging.warning("reject confirmation notify failed: %s", e)
         elif event["type"] == "count":
             config.set_daily_post_count(event["value"])
     db.set_meta("telegram_offset", str(next_offset))

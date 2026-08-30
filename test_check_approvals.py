@@ -20,6 +20,8 @@ def test_run_processes_events_and_publishes(monkeypatch):
         lambda draft_id, status: status_updates.append((draft_id, status)),
     )
     monkeypatch.setattr(check_approvals.telegram_bot, "answer_callback", lambda cq_id, text: None)
+    alerts = []
+    monkeypatch.setattr(check_approvals.telegram_bot, "send_alert", lambda text: alerts.append(text))
     count_calls = []
     monkeypatch.setattr(check_approvals.config, "set_daily_post_count", lambda v: count_calls.append(v))
     meta_calls = []
@@ -44,6 +46,7 @@ def test_run_processes_events_and_publishes(monkeypatch):
     assert "published" in [s for _, s in status_updates]
     assert count_calls == [4]
     assert meta_calls == [("telegram_offset", "2")]
+    assert any("승인" in a for a in alerts)
 
 
 def test_run_prepends_generated_image_to_published_content(monkeypatch):
@@ -159,6 +162,8 @@ def test_run_answer_callback_failure_does_not_crash_and_still_persists_status(mo
         raise Exception("Bad Request: query is too old")
 
     monkeypatch.setattr(check_approvals.telegram_bot, "answer_callback", raise_expired)
+    alerts = []
+    monkeypatch.setattr(check_approvals.telegram_bot, "send_alert", lambda text: alerts.append(text))
 
     meta_calls = []
     monkeypatch.setattr(check_approvals.db, "set_meta", lambda k, v: meta_calls.append((k, v)))
@@ -170,6 +175,8 @@ def test_run_answer_callback_failure_does_not_crash_and_still_persists_status(mo
     assert (1, "approved") in status_updates
     assert (2, "rejected") in status_updates
     assert meta_calls == [("telegram_offset", "5")]
+    assert any("승인" in a for a in alerts)
+    assert any("거부" in a for a in alerts)
 
 
 def test_run_retries_notification_for_orphaned_pending_drafts(monkeypatch):
