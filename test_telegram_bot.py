@@ -123,12 +123,23 @@ def test_send_tistory_copy_sends_header_then_content(monkeypatch):
         return _FakeResp({})
 
     monkeypatch.setattr(telegram_bot.requests, "post", fake_post)
-    telegram_bot.send_tistory_copy("제목", "<p>본문</p>", ["a", "b"], summary="요약")
+    telegram_bot.send_tistory_copy("제목", "<h2>소제목</h2><p>본문 <strong>강조</strong></p>", ["a", "b"], summary="요약")
 
     assert "제목" in sent[0]
     assert "a, b" in sent[0]
     assert "요약" in sent[0]
-    assert sent[1] == "<p>본문</p>"
+    assert "HTML" not in sent[0]
+    assert "<" not in sent[1]
+    assert "▶ 소제목" in sent[1]
+    assert "본문 강조" in sent[1]
+
+
+def test_to_plain_text_converts_links_and_images():
+    html_content = '<img src="http://x/i.png" alt="a" /><p>본문 <a href="http://x/y" target="_blank">참고</a></p>'
+    plain = telegram_bot._to_plain_text(html_content)
+    assert "[이미지: http://x/i.png]" in plain
+    assert "참고 (http://x/y)" in plain
+    assert "<" not in plain
 
 
 def test_send_tistory_copy_chunks_long_content(monkeypatch):
