@@ -77,7 +77,7 @@ def run() -> None:
 
     for draft in db.get_approved_unpublished():
         content = draft["content"]
-        image_url = image_gen.generate_image_url(draft["keyword"])
+        image_url = image_gen.generate_image_url(draft.get("image_prompt_en") or draft["keyword"])
         if image_url:
             alt = html.escape(draft["title"])
             content = f'<img src="{image_url}" alt="{alt}" style="max-width:100%;height:auto;border-radius:8px;" />\n' + content

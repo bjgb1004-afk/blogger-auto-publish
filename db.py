@@ -37,18 +37,20 @@ def init_db() -> None:
         existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(drafts)")}
         if "summary" not in existing_cols:
             conn.execute("ALTER TABLE drafts ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
+        if "image_prompt_en" not in existing_cols:
+            conn.execute("ALTER TABLE drafts ADD COLUMN image_prompt_en TEXT NOT NULL DEFAULT ''")
         conn.commit()
     finally:
         conn.close()
 
 
-def insert_draft(keyword: str, title: str, content: str, tags: list, summary: str = "") -> int:
+def insert_draft(keyword: str, title: str, content: str, tags: list, summary: str = "", image_prompt_en: str = "") -> int:
     conn = get_connection()
     try:
         cursor = conn.execute(
-            "INSERT INTO drafts (keyword, title, content, tags, summary, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?, 'pending', ?)",
-            (keyword, title, content, json.dumps(tags, ensure_ascii=False), summary, datetime.now().isoformat()),
+            "INSERT INTO drafts (keyword, title, content, tags, summary, image_prompt_en, status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
+            (keyword, title, content, json.dumps(tags, ensure_ascii=False), summary, image_prompt_en, datetime.now().isoformat()),
         )
         conn.commit()
         draft_id = cursor.lastrowid

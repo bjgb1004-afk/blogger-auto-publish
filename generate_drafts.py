@@ -46,6 +46,7 @@ def run() -> int:
         draft_id = db.insert_draft(
             keyword, post_data["title"], content, post_data["tags"],
             summary=post_data.get("summary", ""),
+            image_prompt_en=post_data.get("image_prompt_en", ""),
         )
         warnings = validate.check_draft(post_data["title"], content)
         try:

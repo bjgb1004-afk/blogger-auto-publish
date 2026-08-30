@@ -33,7 +33,7 @@ def test_run_creates_needed_count_and_skips_failed_keyword(monkeypatch):
     inserted = []
     monkeypatch.setattr(
         generate_drafts.db, "insert_draft",
-        lambda kw, t, c, tags, summary="": inserted.append(kw) or len(inserted),
+        lambda kw, t, c, tags, summary="", image_prompt_en="": inserted.append(kw) or len(inserted),
     )
     monkeypatch.setattr(
         generate_drafts.telegram_bot, "send_draft_notification",
@@ -57,7 +57,7 @@ def test_run_passes_validation_warnings_to_telegram(monkeypatch):
         generate_drafts.generator, "generate_post",
         lambda keyword: {"title": "t", "content": "c", "tags": []},
     )
-    monkeypatch.setattr(generate_drafts.db, "insert_draft", lambda kw, t, c, tags, summary="": 1)
+    monkeypatch.setattr(generate_drafts.db, "insert_draft", lambda kw, t, c, tags, summary="", image_prompt_en="": 1)
     monkeypatch.setattr(generate_drafts.db, "set_telegram_msg_id", lambda draft_id, msg_id: None)
     monkeypatch.setattr(generate_drafts.validate, "check_draft", lambda title, content: ["본문이 짧음"])
     monkeypatch.setattr(generate_drafts.pubmed, "find_study", lambda topic: None)
@@ -87,7 +87,7 @@ def test_run_persists_draft_even_when_telegram_notification_fails(monkeypatch):
     inserted = []
     monkeypatch.setattr(
         generate_drafts.db, "insert_draft",
-        lambda kw, t, c, tags, summary="": inserted.append(kw) or 1,
+        lambda kw, t, c, tags, summary="", image_prompt_en="": inserted.append(kw) or 1,
     )
 
     def raise_telegram_error(*args, **kwargs):
@@ -122,7 +122,7 @@ def test_run_passes_generated_summary_to_insert_draft(monkeypatch):
     captured = {}
     monkeypatch.setattr(
         generate_drafts.db, "insert_draft",
-        lambda kw, t, c, tags, summary="": captured.setdefault("summary", summary) or 1,
+        lambda kw, t, c, tags, summary="", image_prompt_en="": captured.setdefault("summary", summary) or 1,
     )
 
     generate_drafts.run()
@@ -156,7 +156,7 @@ def test_run_appends_pubmed_citation_for_health_posts(monkeypatch):
     captured = {}
     monkeypatch.setattr(
         generate_drafts.db, "insert_draft",
-        lambda kw, t, c, tags, summary="": captured.setdefault("content", c) or 1,
+        lambda kw, t, c, tags, summary="", image_prompt_en="": captured.setdefault("content", c) or 1,
     )
 
     generate_drafts.run()
