@@ -80,13 +80,16 @@ def get_today_count() -> int:
     return row["c"]
 
 
-def get_recent_keywords(days: int = 30) -> set:
-    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+def get_recent_keywords(days: int = None) -> set:
     conn = get_connection()
     try:
-        rows = conn.execute(
-            "SELECT DISTINCT keyword FROM drafts WHERE created_at >= ?", (cutoff,)
-        ).fetchall()
+        if days is None:
+            rows = conn.execute("SELECT DISTINCT keyword FROM drafts").fetchall()
+        else:
+            cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+            rows = conn.execute(
+                "SELECT DISTINCT keyword FROM drafts WHERE created_at >= ?", (cutoff,)
+            ).fetchall()
     finally:
         conn.close()
     return {row["keyword"] for row in rows}
