@@ -2,7 +2,7 @@ name: Check Approvals
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "7 * * * *"  # 시간마다 1회 (10분 간격이 Actions 무료 2000분/월 한도 초과시켜서 완화, 정각 혼잡 회피로 7분 오프셋)
 
 permissions:
   contents: write
