@@ -29,7 +29,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          GENERATE_MAX_PER_RUN: "1"
+          GENERATE_MAX_PER_RUN: "2"  # GitHub cron 드롭으로 실행 횟수 부족해질 때 1건씩 못 따라잡는 문제 보정
         run: python generate_drafts.py
 
       - name: Show log
