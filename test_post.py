@@ -1,7 +1,7 @@
 import post
 
 
-def test_post_to_blogger_returns_true_on_success(monkeypatch):
+def test_post_to_blogger_returns_url_on_success(monkeypatch):
     class FakePosts:
         def insert(self, blogId, body):
             class Req:
@@ -14,15 +14,15 @@ def test_post_to_blogger_returns_true_on_success(monkeypatch):
             return FakePosts()
 
     monkeypatch.setattr(post, "get_blogger_service", lambda: FakeService())
-    assert post.post_to_blogger("blogid", "title", "<p>c</p>", ["t"]) is True
+    assert post.post_to_blogger("blogid", "title", "<p>c</p>", ["t"]) == "http://example.com"
 
 
-def test_post_to_blogger_returns_false_on_error(monkeypatch):
+def test_post_to_blogger_returns_none_on_error(monkeypatch):
     def boom():
         raise RuntimeError("auth failed")
 
     monkeypatch.setattr(post, "get_blogger_service", boom)
-    assert post.post_to_blogger("blogid", "title", "<p>c</p>", []) is False
+    assert post.post_to_blogger("blogid", "title", "<p>c</p>", []) is None
 
 
 def test_post_to_blogger_includes_search_description_when_provided(monkeypatch):

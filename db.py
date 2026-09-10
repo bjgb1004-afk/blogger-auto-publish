@@ -59,15 +59,6 @@ def insert_draft(keyword: str, title: str, content: str, tags: list, summary: st
     return draft_id
 
 
-def set_telegram_msg_id(draft_id: int, msg_id: int) -> None:
-    conn = get_connection()
-    try:
-        conn.execute("UPDATE drafts SET telegram_msg_id = ? WHERE id = ?", (msg_id, draft_id))
-        conn.commit()
-    finally:
-        conn.close()
-
-
 def get_today_count() -> int:
     today = datetime.now().date().isoformat()
     conn = get_connection()
@@ -104,18 +95,6 @@ def update_status(draft_id: int, status: str) -> None:
         conn.close()
 
 
-def set_status_if_pending(draft_id: int, status: str) -> bool:
-    conn = get_connection()
-    try:
-        cursor = conn.execute(
-            "UPDATE drafts SET status = ? WHERE id = ? AND status = 'pending'", (status, draft_id)
-        )
-        conn.commit()
-        return cursor.rowcount > 0
-    finally:
-        conn.close()
-
-
 def increment_retry(draft_id: int) -> int:
     conn = get_connection()
     try:
@@ -127,23 +106,11 @@ def increment_retry(draft_id: int) -> int:
     return row["c"]
 
 
-def get_pending_without_telegram_msg(days: int = 1) -> list:
-    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+def get_unpublished() -> list:
+    """Drafts created but not yet posted to Blogger (retry queue)."""
     conn = get_connection()
     try:
-        rows = conn.execute(
-            "SELECT * FROM drafts WHERE status = 'pending' AND telegram_msg_id IS NULL AND created_at >= ?",
-            (cutoff,),
-        ).fetchall()
-    finally:
-        conn.close()
-    return [dict(row) for row in rows]
-
-
-def get_approved_unpublished() -> list:
-    conn = get_connection()
-    try:
-        rows = conn.execute("SELECT * FROM drafts WHERE status = 'approved'").fetchall()
+        rows = conn.execute("SELECT * FROM drafts WHERE status = 'pending' ORDER BY id").fetchall()
     finally:
         conn.close()
     return [dict(row) for row in rows]

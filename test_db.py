@@ -13,21 +13,6 @@ def test_insert_and_get_today_count(tmp_path, monkeypatch):
     assert db.get_today_count() == 1
 
 
-def test_set_status_if_pending_blocks_transition_from_published(tmp_path, monkeypatch):
-    monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
-    db.init_db()
-    draft_id = db.insert_draft("키워드", "제목", "<p>본문</p>", [])
-
-    assert db.set_status_if_pending(draft_id, "approved") is True
-    db.update_status(draft_id, "published")
-
-    assert db.set_status_if_pending(draft_id, "approved") is False
-    conn = db.get_connection()
-    status = conn.execute("SELECT status FROM drafts WHERE id = ?", (draft_id,)).fetchone()["status"]
-    conn.close()
-    assert status == "published"
-
-
 def test_recent_keywords_excludes_old(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
     db.init_db()
@@ -40,15 +25,17 @@ def test_recent_keywords_excludes_old(tmp_path, monkeypatch):
     assert "최근키워드" not in db.get_recent_keywords(days=30)
 
 
-def test_update_status_and_approved_unpublished(tmp_path, monkeypatch):
+def test_get_unpublished_returns_pending_drafts(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
     db.init_db()
     draft_id = db.insert_draft("k", "t", "c", ["a", "b"])
-    db.update_status(draft_id, "approved")
-    approved = db.get_approved_unpublished()
-    assert len(approved) == 1
-    assert approved[0]["id"] == draft_id
-    assert json.loads(approved[0]["tags"]) == ["a", "b"]
+    pending = db.get_unpublished()
+    assert len(pending) == 1
+    assert pending[0]["id"] == draft_id
+    assert json.loads(pending[0]["tags"]) == ["a", "b"]
+
+    db.update_status(draft_id, "published")
+    assert db.get_unpublished() == []
 
 
 def test_increment_retry(tmp_path, monkeypatch):
@@ -57,18 +44,6 @@ def test_increment_retry(tmp_path, monkeypatch):
     draft_id = db.insert_draft("k", "t", "c", [])
     assert db.increment_retry(draft_id) == 1
     assert db.increment_retry(draft_id) == 2
-
-
-def test_get_pending_without_telegram_msg(tmp_path, monkeypatch):
-    monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
-    db.init_db()
-    draft_id = db.insert_draft("k", "t", "c", [])
-    pending = db.get_pending_without_telegram_msg()
-    assert len(pending) == 1
-    assert pending[0]["id"] == draft_id
-
-    db.set_telegram_msg_id(draft_id, 123)
-    assert db.get_pending_without_telegram_msg() == []
 
 
 def test_meta_roundtrip(tmp_path, monkeypatch):

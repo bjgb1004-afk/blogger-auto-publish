@@ -28,16 +28,12 @@ pip install -r requirements.txt
 ```
 python generate_drafts.py
 ```
-텔레그램으로 알림 오는지 확인 → 승인 버튼 클릭 →
-```
-python check_approvals.py
-```
-Blogger에 실제로 글이 올라가는지 확인.
+초안 생성 → Blogger 자동 발행 → 텔레그램으로 "발행됨 + 링크 + 이미지 생성 명령어"와 티스토리용 원고가 오는지 확인. 승인 단계 없음.
 
-**주의:** 이 첫 실행에서 브라우저가 열려 구글 로그인을 요청합니다 — 반드시 사람이 있는 상태에서 최소 한 번은 `check_approvals.py`(또는 `post.py`)를 직접 실행해서 `token.json`을 만들어 두어야 합니다. 이 과정을 건너뛰고 바로 스케줄러에 등록하면, 첫 스케줄 실행이 브라우저 콜백을 기다리며 무한정 멈춥니다.
+**주의:** 이 첫 실행에서 브라우저가 열려 구글 로그인을 요청합니다 — 반드시 사람이 있는 상태에서 최소 한 번은 `generate_drafts.py`(또는 `post.py`)를 직접 실행해서 `token.json`을 만들어 두어야 합니다. 이 과정을 건너뛰고 바로 스케줄러에 등록하면, 첫 스케줄 실행이 브라우저 콜백을 기다리며 무한정 멈춥니다.
 
 ## 5. GitHub Actions로 무인 실행 등록
-PC가 꺼져있어도 돌아가도록 Windows 작업 스케줄러 대신 GitHub Actions를 씀 (`.github/workflows/generate-drafts.yml`, `.github/workflows/check-approvals.yml`).
+PC가 꺼져있어도 돌아가도록 Windows 작업 스케줄러 대신 GitHub Actions를 씀 (`.github/workflows/draft-generate.yml`).
 
 1. GitHub에 새 저장소 생성 (private 권장)
 2. 로컬 저장소를 push: `git remote add origin <저장소 URL>` → `git push -u origin feature/blog-auto-publish`
@@ -45,8 +41,8 @@ PC가 꺼져있어도 돌아가도록 Windows 작업 스케줄러 대신 GitHub 
    - `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `BLOGGER_BLOG_ID`: `.env`에 넣은 값 그대로
    - `GOOGLE_CREDENTIALS_JSON`: `credentials.json` 파일 내용 그대로 붙여넣기
    - `GOOGLE_TOKEN_JSON`: `token.json` 파일 내용 그대로 붙여넣기 (4단계에서 브라우저 로그인으로 이미 만들어둔 파일)
-4. push 직후 저장소의 Actions 탭에서 두 워크플로가 보임. 각각 "Run workflow" 버튼으로 1회 수동 실행해서 정상 동작 확인
-5. 이후로는 자동: `generate-drafts`는 하루 5번(KST 09/12/15/18/21시, 1개씩), `check-approvals`는 10분마다 실행됨
+4. push 직후 저장소의 Actions 탭에서 `Generate Drafts` 워크플로가 보임. "Run workflow" 버튼으로 1회 수동 실행해서 정상 동작 확인
+5. 이후로는 자동: 하루 5번(KST 09/12/15/18/21시+7분), 1회 실행당 최대 2건 발행(`GENERATE_MAX_PER_RUN`). 발행 실패한 초안은 `pending`으로 남아 다음 실행에서 재시도되고, 5회 넘게 실패하면 `failed`로 바뀌며 텔레그램 알림이 감
 
 `drafts.db`, `config.json`은 실행마다 저장소에 자동 커밋되어 상태가 이어짐 — 별도 DB 서비스 필요 없음.
 
@@ -72,5 +68,5 @@ PC가 꺼져있어도 돌아가도록 Windows 작업 스케줄러 대신 GitHub 
 ### 운영 원칙 (승인 이후에도 계속 적용됨)
 애드센스 정책은 승인 시점에만 적용되는 게 아니라 계속 적용된다. 승인 후에도:
 - 발행 개수를 급격히 늘리지 말고 몇 주에 걸쳐 서서히 늘릴 것
-- 텔레그램 승인 단계에서 포맷 체크(`validate.py`)뿐 아니라 "실제로 도움이 되는 글인가"를 사람이 직접 판단할 것
+- 자동 발행이므로 포맷 체크(`validate.py`) 경고는 텔레그램 발행 알림에 같이 오고, "실제로 도움이 되는 글인가"는 발행된 글을 사후에 직접 읽고 판단해 필요하면 Blogger에서 수정·삭제할 것
 - 주제를 넓히고 싶으면 `keywords.py`의 `EVERGREEN_KEYWORDS`에 니치를 하나씩 추가하며 반응을 지켜볼 것
