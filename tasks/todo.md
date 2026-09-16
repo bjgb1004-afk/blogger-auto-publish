@@ -62,7 +62,12 @@ blogspot 글 41개가 **전량 미색인**이다. 원인은 기술 오류가 아
 - 영어 트랙 로컬 1회 실행 성공:
   `how to eat Korean BBQ like a local` → https://korean-culture4you.blogspot.com/2026/09/how-do-locals-actually-eat-korean-bbq.html
   (본문 9,231자, 영어 슬러그, summary/image_prompt_en 정상)
-- 기존 pending 5건(id 16~20)은 `track='tistory'`로 이관돼 텔레그램 원고로 소진 예정.
+- **로컬 `drafts.db`가 원격보다 22건 뒤처져 있었다.** 로컬은 20건(5건 pending)인데 원격은
+  Actions가 계속 돌려 42건 전량 published 상태였고, 방금 삭제한 blogspot 42개와 정확히 일치한다.
+  즉 "pending 5건"은 로컬만의 착시였고 실제로는 이미 발행·전달이 끝난 글이다. 로컬 DB를 밀면
+  22건의 발행 이력이 사라져 같은 키워드로 중복 생성될 뻔했다. 원격 DB를 정본으로 채택하고
+  `track` 마이그레이션(42건 전부 tistory) + 영어 글 1건을 blogspot 레코드로 옮겨 넣었다.
+  → 진단·작업 전 `git pull` 필수. 이번에도 이걸 건너뛰어 리베이스 충돌로 뒤늦게 발견했다.
 - `pytest` 82개 전부 통과.
 
 ### 미확인 (CLAUDE.md #4)
