@@ -36,8 +36,8 @@ blogspot 글 41개가 **전량 미색인**이다. 원인은 기술 오류가 아
 - [x] **telegram_bot.py** — `/count N` → `/count <track> N`으로 확장.
 - [x] **테스트 갱신** — `test_db.py`, `test_config.py`, `test_keywords.py`, `test_generator.py`, `test_generate_drafts.py`, `test_integration.py`.
 - [x] **기존 pending 5건 처리** — 한국어 재테크 초안이므로 `track='tistory'`로 넘겨 텔레그램 원고로 소진. 폐기하지 않는다.
-- [ ] **blogspot 41개 삭제** — `posts().delete()` 스크립트. **되돌릴 수 없으므로 코드 작업을 전부 끝내고 마지막에, 실행 직전 한 번 더 확인받는다.**
-- [ ] **커밋 + push** — GitHub Actions가 실제 실행 주체라 push 전까지는 아무것도 반영되지 않는다.
+- [x] **blogspot 41개 삭제** — `posts().delete()` 스크립트. **되돌릴 수 없으므로 코드 작업을 전부 끝내고 마지막에, 실행 직전 한 번 더 확인받는다.**
+- [x] **커밋 + push** — GitHub Actions가 실제 실행 주체라 push 전까지는 아무것도 반영되지 않는다.
 
 ## 검증
 
@@ -54,4 +54,19 @@ blogspot 글 41개가 **전량 미색인**이다. 원인은 기술 오류가 아
 
 ## 리뷰
 
-(작업 완료 후 작성)
+2026-09-16 완료.
+
+- 두 트랙이 키워드 풀·프롬프트·발행 경로까지 완전히 독립. 파생 구조(`_vary_for_repost`,
+  `rewrite_for_repost`)는 삭제했다. Gemini 호출도 글당 1회로 줄었다(기존엔 재작성까지 2회).
+- 기존 blogspot 글은 41개가 아니라 **42개**였고 전량 삭제했다. 삭제 후 목록 조회 0개 확인.
+- 영어 트랙 로컬 1회 실행 성공:
+  `how to eat Korean BBQ like a local` → https://korean-culture4you.blogspot.com/2026/09/how-do-locals-actually-eat-korean-bbq.html
+  (본문 9,231자, 영어 슬러그, summary/image_prompt_en 정상)
+- 기존 pending 5건(id 16~20)은 `track='tistory'`로 이관돼 텔레그램 원고로 소진 예정.
+- `pytest` 82개 전부 통과.
+
+### 미확인 (CLAUDE.md #4)
+로컬 수동 실행만 성공했다. **GitHub Actions cron 무인 실행은 아직 검증 안 됨.**
+다음 트리거(KST 09/12/15/18/21시 07분) 이후 워크플로 실행 이력과 `app.log`를 직접 확인해야
+완료다. 특히 확인할 것: 한 실행에 `GENERATE_MAX_PER_RUN=2`라 blogspot 2건이 먼저 나가고
+다음 실행부터 tistory가 도는 순서가 실제로 맞는지.
