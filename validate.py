@@ -12,6 +12,9 @@ def check_draft(title: str, content: str) -> list:
     if len(text_only) < MIN_LENGTH:
         warnings.append(f"본문이 {len(text_only)}자로 짧음(최소 권장 {MIN_LENGTH}자)")
 
+    if content.lstrip().startswith("<h2"):
+        warnings.append("도입 문단 없이 소제목으로 시작함(첫 <h2> 앞에 <p> 필요)")
+
     open_tags = re.findall(r"<(" + "|".join(CHECKED_TAGS) + r")>", content)
     close_tags = re.findall(r"</(" + "|".join(CHECKED_TAGS) + r")>", content)
     if Counter(open_tags) != Counter(close_tags):

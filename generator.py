@@ -17,6 +17,7 @@ PROMPT_TEMPLATE = """너는 블로그 작가다. 아래 키워드로 블로그 �
 - 제목은 키워드를 그냥 나열하지 말고, 사람이 실제로 검색창이나 챗GPT에 물어볼 법한 자연스러운 문장·질문 형태로 써라.
 - 도입부 첫 문장은 이 글의 핵심 주제를 군더더기 없이 한 줄로 명확히 정의하는 문장으로 시작해라. (예: "OO란 ~하는 것을 말한다") — AI 검색엔진이 이 문장을 그대로 인용해가는 경우가 많다.
 - 숫자나 통계는 확실하지 않으면 절대 지어내지 말고, 다만 두루뭉술하게 뭉개지 말고, 실행 가능한 구체적 방법이나 사례를 들어 설명해라.
+- content는 반드시 <p> 태그로 시작해라. 첫 <h2>보다 앞에 도입 문단이 와야 한다. 제목을 <h2>로 다시 쓰거나 첫 소제목을 맨 앞에 두지 마라.
 - 구조: 도입(한 줄 정의 + 문제 공감 1문단) → 소제목(h2) 2~3개, 각 소제목마다 구체적 방법·사례·실행 팁을 최소 1개씩 포함 → 마무리(요약 + 다음 행동 제안).
 - 문장 길이를 짧은 문장과 긴 문장으로 다양하게 섞고, 같은 어미나 문장 시작 표현을 반복하지 마라.
 - 본문 전체 글자 수(태그 제외)는 최소 2000자 이상으로 써라.
@@ -38,6 +39,7 @@ Rules:
 - The title must read like something a real person would type into Google or ask ChatGPT — a natural question or sentence, not a keyword dump.
 - Open the first sentence with a clean one-line definition or direct answer to the keyword (e.g. "Gochujang is a fermented Korean chili paste that ..."). AI search engines quote this sentence directly.
 - Never invent statistics, prices, dates, or names you are not sure about. Do not be vague either — give concrete examples, specific dishes, places, phrases, or step-by-step actions.
+- The content must start with a <p> tag. The intro paragraph comes before the first <h2>. Do not repeat the title as an <h2> and do not put a section heading first.
 - Structure: intro (one-line answer + one paragraph of context) -> 2-3 <h2> sections, each with at least one concrete example, step, or practical tip -> closing (short recap + what the reader should try next).
 - Mix short and long sentences. Do not start consecutive sentences the same way.
 - Write at least 1200 words of body text (excluding tags).
