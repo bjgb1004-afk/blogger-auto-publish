@@ -16,8 +16,13 @@ Blogger API로 글을 올리려면 구글 OAuth 클라이언트가 필요합니�
 4. 다운로드한 JSON 파일을 `credentials.json`이라는 이름으로 프로젝트 폴더에 저장
 
 ## 2. 초기 발행 개수 설정 (선택)
-`config.json`이 없으면 첫 실행 때 자동으로 `{"daily_post_count": 5}`로 생성됨.
-바꾸고 싶으면 직접 숫자를 고치거나, 나중에 텔레그램으로 `/count 3` 처럼 보내면 됨.
+트랙별로 하루 발행량을 따로 잡는다. `config.json`이 없으면 첫 실행 때 자동으로
+`{"daily_post_count": {"blogspot": 2, "tistory": 3}}`로 생성됨.
+
+- `blogspot` — 영어 K-culture 글, Blogger API로 자동 발행
+- `tistory` — 한국어 재테크/건강 원고, 텔레그램으로 받아서 수동 복붙
+
+바꾸고 싶으면 직접 숫자를 고치거나, 텔레그램으로 `/count tistory 3` 처럼 트랙을 붙여 보내면 됨.
 
 ## 3. 의존성 설치
 ```

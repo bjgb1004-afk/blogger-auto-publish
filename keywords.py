@@ -39,6 +39,72 @@ EVERGREEN_KEYWORDS = {
     # ponytail: 100개 풀 + 영구 재사용금지 = 약 18~19일 runway(하루5개 기준). 소진 전에 항목 추가 필요.
 }
 
+K_CULTURE_KEYWORDS = {
+    "food": [
+        "how to eat Korean BBQ like a local", "what is gochujang and how do you use it",
+        "difference between kimchi and sauerkraut", "how spicy is tteokbokki really",
+        "what do Koreans eat for breakfast", "how to order at a Korean restaurant in Korea",
+        "what is banchan and why is it free", "best Korean street food to try in Seoul",
+        "how to make kimchi fried rice at home", "what is bibimbap supposed to taste like",
+        "why do Koreans eat seaweed soup on birthdays", "what is Korean corn dog made of",
+        "how to eat Korean fried chicken with beer", "what is jjigae and how is it different from soup",
+        "is Korean food healthy for weight loss", "what is soju and how do you drink it",
+        "Korean convenience store food worth trying", "what is naengmyeon and when do Koreans eat it",
+        "how to use Korean chopsticks and spoon properly", "what is samgyeopsal night in Korea",
+    ],
+    "beauty": [
+        "what is the 10 step Korean skincare routine", "is Korean sunscreen better than western sunscreen",
+        "what is a cushion compact and how do you use it", "how to get glass skin naturally",
+        "what is double cleansing and do you need it", "are sheet masks actually worth it",
+        "Korean skincare ingredients to look for", "what is skin barrier repair Korean method",
+        "how Koreans do makeup differently from the west", "what is gradient lip makeup",
+        "best Korean products for sensitive skin", "is snail mucin safe for your face",
+    ],
+    "language": [
+        "how hard is it to learn Korean for English speakers", "how to read Hangul in one day",
+        "what does oppa actually mean", "Korean honorifics explained simply",
+        "most useful Korean phrases for travelers", "what does aegyo mean in Korean culture",
+        "difference between formal and casual Korean speech", "why Koreans ask your age first",
+        "Korean words that have no English translation", "how to count in Korean two number systems",
+    ],
+    "travel": [
+        "how many days do you need in Seoul", "how to use the subway in Seoul as a foreigner",
+        "is Korea safe for solo female travelers", "best time of year to visit Korea",
+        "what is a jjimjilbang and how does it work", "how to get a T money card in Korea",
+        "cheapest way to travel between Seoul and Busan", "do you need to tip in Korea",
+        "what to pack for Korea in winter", "how to use Korean cafes to work remotely",
+    ],
+    "drama_film": [
+        "where to start with Korean dramas as a beginner", "why Korean dramas end after one season",
+        "what is a chaebol in Korean dramas", "Korean drama cliches explained",
+        "how accurate are Korean dramas about real Korean life", "best Korean movies to watch after Parasite",
+        "what is the Korean wave hallyu", "why Korean dramas have so much product placement",
+    ],
+    "music": [
+        "how does the K-pop idol training system work", "what is a K-pop comeback",
+        "why do K-pop fans buy multiple albums", "what is a fanchant in K-pop",
+        "how K-pop groups get their names", "what is trot music in Korea",
+    ],
+    "etiquette": [
+        "Korean drinking etiquette rules for foreigners", "why Koreans take shoes off indoors",
+        "how to give and receive things with two hands in Korea", "what is Korean age and how is it counted",
+        "Korean gift giving etiquette explained", "what not to do in Korea as a tourist",
+        "how bowing works in Korean culture", "why Koreans share food from one plate",
+    ],
+    "shopping": [
+        "how to shop at Olive Young as a tourist", "what is Coupang and can foreigners use it",
+        "how tax refund works for tourists in Korea", "best Korean souvenirs that are not keychains",
+        "how to buy K-pop albums from overseas", "what is Myeongdong known for shopping",
+    ],
+}
+
+
+def get_kculture_keywords() -> list:
+    result = []
+    for topic_list in K_CULTURE_KEYWORDS.values():
+        result.extend(topic_list)
+    return result
+
 
 def get_trend_keywords(limit: int = 10) -> list:
     pytrends = TrendReq(hl="ko-KR", tz=540)
@@ -66,8 +132,12 @@ def get_evergreen_keywords() -> list:
     return result
 
 
-def get_keywords_to_use(needed_count: int) -> list:
-    recent = db.get_recent_keywords()
+def get_keywords_to_use(track: str, needed_count: int) -> list:
+    recent = db.get_recent_keywords(track)
+    if track == "blogspot":
+        # pytrends/naver_trends는 한국어 전용이라 영어 트랙에서는 풀만 쓴다
+        return [kw for kw in get_kculture_keywords() if kw not in recent][:needed_count]
+
     candidates = []
     try:
         candidates.extend(get_trend_keywords())

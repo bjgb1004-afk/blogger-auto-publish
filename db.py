@@ -39,18 +39,20 @@ def init_db() -> None:
             conn.execute("ALTER TABLE drafts ADD COLUMN summary TEXT NOT NULL DEFAULT ''")
         if "image_prompt_en" not in existing_cols:
             conn.execute("ALTER TABLE drafts ADD COLUMN image_prompt_en TEXT NOT NULL DEFAULT ''")
+        if "track" not in existing_cols:
+            conn.execute("ALTER TABLE drafts ADD COLUMN track TEXT NOT NULL DEFAULT 'tistory'")
         conn.commit()
     finally:
         conn.close()
 
 
-def insert_draft(keyword: str, title: str, content: str, tags: list, summary: str = "", image_prompt_en: str = "") -> int:
+def insert_draft(keyword: str, title: str, content: str, tags: list, summary: str = "", image_prompt_en: str = "", track: str = "tistory") -> int:
     conn = get_connection()
     try:
         cursor = conn.execute(
-            "INSERT INTO drafts (keyword, title, content, tags, summary, image_prompt_en, status, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)",
-            (keyword, title, content, json.dumps(tags, ensure_ascii=False), summary, image_prompt_en, datetime.now().isoformat()),
+            "INSERT INTO drafts (keyword, title, content, tags, summary, image_prompt_en, track, status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
+            (keyword, title, content, json.dumps(tags, ensure_ascii=False), summary, image_prompt_en, track, datetime.now().isoformat()),
         )
         conn.commit()
         draft_id = cursor.lastrowid
@@ -59,27 +61,28 @@ def insert_draft(keyword: str, title: str, content: str, tags: list, summary: st
     return draft_id
 
 
-def get_today_count() -> int:
+def get_today_count(track: str) -> int:
     today = datetime.now().date().isoformat()
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT COUNT(*) AS c FROM drafts WHERE substr(created_at, 1, 10) = ?", (today,)
+            "SELECT COUNT(*) AS c FROM drafts WHERE substr(created_at, 1, 10) = ? AND track = ?",
+            (today, track),
         ).fetchone()
     finally:
         conn.close()
     return row["c"]
 
 
-def get_recent_keywords(days: int = None) -> set:
+def get_recent_keywords(track: str, days: int = None) -> set:
     conn = get_connection()
     try:
         if days is None:
-            rows = conn.execute("SELECT DISTINCT keyword FROM drafts").fetchall()
+            rows = conn.execute("SELECT DISTINCT keyword FROM drafts WHERE track = ?", (track,)).fetchall()
         else:
             cutoff = (datetime.now() - timedelta(days=days)).isoformat()
             rows = conn.execute(
-                "SELECT DISTINCT keyword FROM drafts WHERE created_at >= ?", (cutoff,)
+                "SELECT DISTINCT keyword FROM drafts WHERE track = ? AND created_at >= ?", (track, cutoff)
             ).fetchall()
     finally:
         conn.close()
@@ -106,11 +109,13 @@ def increment_retry(draft_id: int) -> int:
     return row["c"]
 
 
-def get_unpublished() -> list:
-    """Drafts created but not yet posted to Blogger (retry queue)."""
+def get_unpublished(track: str) -> list:
+    """Drafts created but not yet delivered for this track (retry queue)."""
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM drafts WHERE status = 'pending' ORDER BY id").fetchall()
+        rows = conn.execute(
+            "SELECT * FROM drafts WHERE status = 'pending' AND track = ? ORDER BY id", (track,)
+        ).fetchall()
     finally:
         conn.close()
     return [dict(row) for row in rows]

@@ -17,7 +17,7 @@ def test_get_events_parses_count(monkeypatch):
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     updates = [
         {"update_id": 1, "callback_query": {"id": "cq1", "data": "approve:7"}},
-        {"update_id": 2, "message": {"text": "/count 3", "chat": {"id": 123}}},
+        {"update_id": 2, "message": {"text": "/count tistory 3", "chat": {"id": 123}}},
     ]
     monkeypatch.setattr(
         telegram_bot.requests, "get",
@@ -25,7 +25,7 @@ def test_get_events_parses_count(monkeypatch):
     )
     events, next_offset = telegram_bot.get_events(offset=0)
     assert next_offset == 3
-    assert events == [{"type": "count", "value": 3}]  # 승인 콜백은 더 이상 처리하지 않음
+    assert events == [{"type": "count", "track": "tistory", "value": 3}]  # 승인 콜백은 더 이상 처리하지 않음
 
 
 def test_send_alert_posts_message(monkeypatch):
@@ -136,3 +136,18 @@ def test_get_events_clamps_count_value(monkeypatch):
     events, next_offset = telegram_bot.get_events(offset=0)
     assert events == []
     assert next_offset == 2
+
+
+def test_get_events_ignores_count_without_track(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    updates = [
+        {"update_id": 1, "message": {"text": "/count 3", "chat": {"id": 123}}},
+        {"update_id": 2, "message": {"text": "/count naver 3", "chat": {"id": 123}}},
+    ]
+    monkeypatch.setattr(
+        telegram_bot.requests, "get",
+        lambda url, params, timeout: _FakeResp({"result": updates}),
+    )
+    events, _ = telegram_bot.get_events(offset=0)
+    assert events == []

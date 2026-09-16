@@ -61,19 +61,40 @@ def test_generate_post_uses_client(monkeypatch):
     assert result["tags"] == ["x"]
 
 
-def test_rewrite_for_repost_returns_new_title_and_intro(monkeypatch):
-    fake_text = '{"title": "새 제목", "intro": "<p>새 도입부</p>"}'
-    monkeypatch.setattr(generator, "_get_client", lambda: _FakeClient(fake_text))
-    result = generator.rewrite_for_repost("원래 제목", "<p>원래 도입부</p>")
-    assert result == {"title": "새 제목", "intro": "<p>새 도입부</p>"}
+class _PromptCapturingModels:
+    def __init__(self):
+        self.prompt = None
+
+    def generate_content(self, model, contents):
+        self.prompt = contents
+        return _FakeResponse('{"title": "t", "content": "<p>c</p>", "tags": []}')
 
 
-def test_rewrite_for_repost_strips_markdown_fence(monkeypatch):
-    fake_text = '```json\n{"title": "새 제목", "intro": "<p>새 도입부</p>"}\n```'
-    monkeypatch.setattr(generator, "_get_client", lambda: _FakeClient(fake_text))
-    result = generator.rewrite_for_repost("원래 제목", "<p>원래 도입부</p>")
-    assert result["title"] == "새 제목"
+class _PromptCapturingClient:
+    def __init__(self):
+        self.models = _PromptCapturingModels()
 
+
+def test_blogspot_track_uses_english_kculture_prompt(monkeypatch):
+    client = _PromptCapturingClient()
+    monkeypatch.setattr(generator, "_get_client", lambda: client)
+
+    generator.generate_post("what is gochujang", track="blogspot")
+
+    prompt = client.models.prompt
+    assert "what is gochujang" in prompt
+    assert "Korean culture" in prompt
+    assert "진단과 처방" not in prompt  # 면책 문구 로직은 티스토리 전용
+    assert "health_topic_en" not in prompt
+
+
+def test_tistory_track_keeps_korean_prompt(monkeypatch):
+    client = _PromptCapturingClient()
+    monkeypatch.setattr(generator, "_get_client", lambda: client)
+
+    generator.generate_post("배당주 추천", track="tistory")
+
+    assert "health_topic_en" in client.models.prompt
 
 class _FlakyModels:
     def __init__(self, fail_times, text):

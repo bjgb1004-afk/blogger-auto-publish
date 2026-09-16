@@ -30,16 +30,27 @@ PROMPT_TEMPLATE = """너는 블로그 작가다. 아래 키워드로 블로그 �
 {{"title": "글 제목", "content": "HTML 본문", "tags": ["태그1", "태그2"], "summary": "검색결과용 요약", "health_topic_en": "PubMed 검색어 또는 빈 문자열", "image_prompt_en": "삽화 장면 영어 3~6단어"}}
 """
 
-REPOST_PROMPT_TEMPLATE = """아래는 이미 다른 블로그에 발행한 글의 제목과 도입부다. 같은 내용을 다른 블로그에도 올릴 건데, 검색엔진에 중복 콘텐츠로 안 걸리도록 제목과 도입부만 다른 표현으로 바꿔써라. 의미와 핵심 정보는 그대로 유지해라.
+KCULTURE_PROMPT_TEMPLATE = """You are a blogger who lives in Korea and writes in English for foreign readers curious about Korean culture. Write one blog post on the keyword below.
+Keyword: {keyword}
 
-원본 제목: {title}
-원본 도입부: {intro}
+Rules:
+- Never mention or hint that you are an AI, a bot, or an assistant. Write as a person sharing first-hand knowledge.
+- The title must read like something a real person would type into Google or ask ChatGPT — a natural question or sentence, not a keyword dump.
+- Open the first sentence with a clean one-line definition or direct answer to the keyword (e.g. "Gochujang is a fermented Korean chili paste that ..."). AI search engines quote this sentence directly.
+- Never invent statistics, prices, dates, or names you are not sure about. Do not be vague either — give concrete examples, specific dishes, places, phrases, or step-by-step actions.
+- Structure: intro (one-line answer + one paragraph of context) -> 2-3 <h2> sections, each with at least one concrete example, step, or practical tip -> closing (short recap + what the reader should try next).
+- Mix short and long sentences. Do not start consecutive sentences the same way.
+- Write at least 1200 words of body text (excluding tags).
+- Explain Korean words in romanization with the Hangul in parentheses on first use, e.g. gochujang (고추장).
+- Write the body as HTML using only <h2>, <p>, and <strong> tags.
+- Put a 1-2 sentence meta description (around 150 characters) in the summary field.
+- Put an illustration scene for this post in image_prompt_en as 3-6 English words (e.g. "korean bbq grill with side dishes"). It is a prompt for AI image generation, so focus on concrete objects and scenes. Never include human faces or specific people.
+- Respond with the JSON format below only. Do not add any other text.
 
-글 안에 "블로그봇", "AI", "챗봇" 등 자기 자신(작성 주체)을 밝히거나 언급하는 표현을 절대 쓰지 마라. 사람이 직접 쓴 글처럼 작성해라.
-
-아래 JSON 형식으로만 답해라. 다른 텍스트 붙이지 마라.
-{{"title": "새 제목", "intro": "새 도입부 (HTML <p> 태그 포함)"}}
+{{"title": "post title", "content": "HTML body", "tags": ["tag1", "tag2"], "summary": "meta description", "image_prompt_en": "illustration scene in 3-6 english words"}}
 """
+
+PROMPT_TEMPLATES = {"tistory": PROMPT_TEMPLATE, "blogspot": KCULTURE_PROMPT_TEMPLATE}
 
 
 def _get_client():
@@ -83,14 +94,7 @@ def _generate_content_with_retry(prompt: str):
             time.sleep(RETRY_BACKOFF_SECONDS * attempt)
 
 
-def generate_post(keyword: str) -> dict:
-    prompt = PROMPT_TEMPLATE.format(keyword=keyword)
+def generate_post(keyword: str, track: str = "tistory") -> dict:
+    prompt = PROMPT_TEMPLATES[track].format(keyword=keyword)
     response = _generate_content_with_retry(prompt)
     return _parse_response(response.text)
-
-
-def rewrite_for_repost(title: str, intro_html: str) -> dict:
-    prompt = REPOST_PROMPT_TEMPLATE.format(title=title, intro=intro_html)
-    response = _generate_content_with_retry(prompt)
-    data = json.loads(_strip_markdown_fence(response.text))
-    return {"title": data["title"], "intro": data["intro"]}

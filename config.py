@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).parent / "config.json"
-DEFAULT_CONFIG = {"daily_post_count": 3}
+DEFAULT_CONFIG = {"daily_post_count": {"blogspot": 2, "tistory": 3}}
 
 
 def load_config() -> dict:
@@ -18,11 +18,14 @@ def save_config(config_data: dict) -> None:
         json.dump(config_data, f, ensure_ascii=False, indent=2)
 
 
-def get_daily_post_count() -> int:
-    return load_config().get("daily_post_count", DEFAULT_CONFIG["daily_post_count"])
+def get_daily_post_count(track: str) -> int:
+    counts = load_config().get("daily_post_count", {})
+    return counts.get(track, DEFAULT_CONFIG["daily_post_count"][track])
 
 
-def set_daily_post_count(count: int) -> None:
+def set_daily_post_count(track: str, count: int) -> None:
     data = load_config()
-    data["daily_post_count"] = count
+    counts = dict(data.get("daily_post_count", {}))
+    counts[track] = count
+    data["daily_post_count"] = counts
     save_config(data)

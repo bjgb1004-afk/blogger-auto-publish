@@ -15,9 +15,9 @@ def test_get_evergreen_keywords_nonempty():
 
 def test_get_keywords_to_use_excludes_recent(monkeypatch):
     monkeypatch.setattr(keywords, "get_trend_keywords", lambda limit=10: ["트렌드1", "트렌드2"])
-    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: {"트렌드1"})
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda track, days=30: {"트렌드1"})
     monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", lambda kws: {})
-    result = keywords.get_keywords_to_use(needed_count=2)
+    result = keywords.get_keywords_to_use("tistory", needed_count=2)
     assert "트렌드1" not in result
     assert len(result) == 2
 
@@ -26,22 +26,22 @@ def test_get_keywords_to_use_falls_back_when_trends_fail(monkeypatch):
     def boom(limit=10):
         raise RuntimeError("network down")
     monkeypatch.setattr(keywords, "get_trend_keywords", boom)
-    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda track, days=30: set())
     monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", lambda kws: {})
-    result = keywords.get_keywords_to_use(needed_count=1)
+    result = keywords.get_keywords_to_use("tistory", needed_count=1)
     assert len(result) == 1
 
 
 def test_get_keywords_to_use_prioritizes_higher_naver_trend_score(monkeypatch):
     monkeypatch.setattr(keywords, "get_trend_keywords", lambda limit=10: [])
     monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천", "ETF 추천", "예적금 금리 비교"])
-    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda track, days=30: set())
     monkeypatch.setattr(
         keywords.naver_trends, "get_trend_scores",
         lambda kws: {"배당주 추천": 10.0, "ETF 추천": 80.0, "예적금 금리 비교": 30.0},
     )
 
-    result = keywords.get_keywords_to_use(needed_count=3)
+    result = keywords.get_keywords_to_use("tistory", needed_count=3)
 
     assert result == ["ETF 추천", "예적금 금리 비교", "배당주 추천"]
 
@@ -49,13 +49,13 @@ def test_get_keywords_to_use_prioritizes_higher_naver_trend_score(monkeypatch):
 def test_get_keywords_to_use_keeps_order_when_naver_lookup_fails(monkeypatch):
     monkeypatch.setattr(keywords, "get_trend_keywords", lambda limit=10: [])
     monkeypatch.setattr(keywords, "get_evergreen_keywords", lambda: ["배당주 추천", "ETF 추천"])
-    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda days=30: set())
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda track, days=30: set())
 
     def boom(kws):
         raise RuntimeError("naver api down")
     monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", boom)
 
-    result = keywords.get_keywords_to_use(needed_count=2)
+    result = keywords.get_keywords_to_use("tistory", needed_count=2)
 
     assert result == ["배당주 추천", "ETF 추천"]
 
@@ -106,3 +106,26 @@ def test_get_trend_keywords_respects_limit(monkeypatch):
     result = keywords.get_trend_keywords(limit=2)
 
     assert result == ["a", "b"]
+
+
+def test_kculture_pool_is_english_and_separate_from_evergreen():
+    kws = keywords.get_kculture_keywords()
+    assert len(kws) > 40
+    assert all(k.isascii() for k in kws)
+    assert not set(kws) & set(keywords.get_evergreen_keywords())
+
+
+def test_blogspot_track_uses_kculture_pool_without_trend_apis(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("한국어 트렌드 API는 영어 트랙에서 호출하면 안 된다")
+
+    monkeypatch.setattr(keywords, "get_trend_keywords", boom)
+    monkeypatch.setattr(keywords.naver_trends, "get_trend_scores", boom)
+    first = keywords.get_kculture_keywords()[0]
+    monkeypatch.setattr(keywords.db, "get_recent_keywords", lambda track, days=30: {first})
+
+    result = keywords.get_keywords_to_use("blogspot", needed_count=2)
+
+    assert first not in result
+    assert len(result) == 2
+    assert set(result) <= set(keywords.get_kculture_keywords())

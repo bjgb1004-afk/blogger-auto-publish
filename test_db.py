@@ -7,10 +7,10 @@ import db
 def test_insert_and_get_today_count(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
     db.init_db()
-    assert db.get_today_count() == 0
+    assert db.get_today_count("tistory") == 0
     draft_id = db.insert_draft("키워드1", "제목1", "<p>본문</p>", ["태그1"])
     assert isinstance(draft_id, int)
-    assert db.get_today_count() == 1
+    assert db.get_today_count("tistory") == 1
 
 
 def test_recent_keywords_excludes_old(tmp_path, monkeypatch):
@@ -22,20 +22,20 @@ def test_recent_keywords_excludes_old(tmp_path, monkeypatch):
     conn.execute("UPDATE drafts SET created_at = ? WHERE keyword = '최근키워드'", (old_date,))
     conn.commit()
     conn.close()
-    assert "최근키워드" not in db.get_recent_keywords(days=30)
+    assert "최근키워드" not in db.get_recent_keywords("tistory", days=30)
 
 
 def test_get_unpublished_returns_pending_drafts(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "DB_PATH", tmp_path / "test.db")
     db.init_db()
     draft_id = db.insert_draft("k", "t", "c", ["a", "b"])
-    pending = db.get_unpublished()
+    pending = db.get_unpublished("tistory")
     assert len(pending) == 1
     assert pending[0]["id"] == draft_id
     assert json.loads(pending[0]["tags"]) == ["a", "b"]
 
     db.update_status(draft_id, "published")
-    assert db.get_unpublished() == []
+    assert db.get_unpublished("tistory") == []
 
 
 def test_increment_retry(tmp_path, monkeypatch):
@@ -84,3 +84,40 @@ def test_init_db_migrates_existing_table_without_summary_column(tmp_path, monkey
 
     cols = {row["name"] for row in db.get_connection().execute("PRAGMA table_info(drafts)")}
     assert "summary" in cols
+
+
+def test_track_column_isolates_drafts(tmp_path, monkeypatch):
+    monkeypatch.setattr(db, "DB_PATH", tmp_path / "track.db")
+    db.init_db()
+    db.insert_draft("kimchi", "t", "c", [], track="blogspot")
+    db.insert_draft("배당주 추천", "t", "c", [])  # 기본값은 tistory
+
+    assert db.get_today_count("blogspot") == 1
+    assert db.get_today_count("tistory") == 1
+    assert db.get_recent_keywords("blogspot") == {"kimchi"}
+    assert [d["keyword"] for d in db.get_unpublished("tistory")] == ["배당주 추천"]
+
+
+def test_init_db_migrates_legacy_rows_to_tistory_track(tmp_path, monkeypatch):
+    db_path = tmp_path / "legacy_track.db"
+    monkeypatch.setattr(db, "DB_PATH", db_path)
+    conn = db.get_connection()
+    conn.execute("""
+        CREATE TABLE drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL, title TEXT NOT NULL, content TEXT NOT NULL,
+            tags TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL, telegram_msg_id INTEGER,
+            retry_count INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    conn.execute(
+        "INSERT INTO drafts (keyword, title, content, tags, created_at) VALUES ('옛키워드','t','c','[]',?)",
+        (datetime.now().isoformat(),),
+    )
+    conn.commit()
+    conn.close()
+
+    db.init_db()
+
+    assert db.get_recent_keywords("tistory") == {"옛키워드"}
